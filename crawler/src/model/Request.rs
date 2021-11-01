@@ -5,7 +5,6 @@ pub struct AgeOfEmpiresLeaderboardRequest {
     region: Region,
     versus: Versus,
     matchType: MatchType,
-    
     teamSize: Option<TeamSize>,
     searchPlayer: String,
     page: u8,

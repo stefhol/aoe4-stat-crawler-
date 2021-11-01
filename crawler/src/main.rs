@@ -1,5 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr};
 mod model;
+mod actor;
 use anyhow::Error;
 use log::info;
 
@@ -28,7 +29,7 @@ async fn main() -> Result<(), Error> {
     );
 
     let client = reqwest::Client::new();
-    let res: Leaderboard = client
+    let mut res: Leaderboard = client
         .post("https://api.ageofempires.com/api/ageiv/Leaderboard")
         .json(&request)
         .send()
@@ -36,6 +37,8 @@ async fn main() -> Result<(), Error> {
         // .expect("Cant send")
         .json()
         .await?;
+        //add request to know what type is retrieved
+        res.request = Some(request.to_owned());
     info!("{:#?}", res);
     Ok(())
 }
