@@ -1,5 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-create table age_user (
+create table player (
     id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
     rlUserId int UNIQUE,
     userName varchar(255),
@@ -18,7 +18,7 @@ create table match_history(
     winStreak int
 );
 
-create table user_match_history(
-    user_id uuid REFERENCES age_user(id),
+create table player_match_history(
+    player_id uuid REFERENCES player(id),
     match_history_id uuid REFERENCES match_history(id)
 );

@@ -17,8 +17,8 @@ VALUES(
     3,
     10
 ) RETURNING id
-), temp_user AS (
-    INSERT INTO age_user(
+), temp_player AS (
+    INSERT INTO player(
     rlUserId,
     userName,
     region,
@@ -31,12 +31,12 @@ VALUES(
     'http://'
 ) RETURNING id
 )
-INSERT INTO user_match_history(
-    user_id,
+INSERT INTO player_match_history(
+    player_id,
     match_history_id
 )
 VALUES(
-    (SELECT id from temp_user),
+    (SELECT id from temp_player),
     (SELECT id from temp_match)
 );
 
