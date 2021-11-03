@@ -7,26 +7,19 @@ pub struct AgeOfEmpiresLeaderboardRequest {
     matchType: MatchType,
     teamSize: Option<TeamSize>,
     searchPlayer: String,
-    page: u8,
-    count: u8,
+    page: u32,
+    pub count: u32,
 }
-pub trait New {
-    fn new(
-        page: u8,
-        region: Region,
-        teamSize: Option<TeamSize>,
-        versus: Versus,
-    ) -> AgeOfEmpiresLeaderboardRequest;
-}
-impl New for AgeOfEmpiresLeaderboardRequest {
-    fn new(
-        page: u8,
+
+impl AgeOfEmpiresLeaderboardRequest {
+    pub fn new(
+        page: u32,
         region: Region,
         teamSize: Option<TeamSize>,
         versus: Versus,
     ) -> AgeOfEmpiresLeaderboardRequest {
         AgeOfEmpiresLeaderboardRequest {
-            count: 200,
+            count: 100,
             matchType: MatchType::Unranked,
             page,
             region,

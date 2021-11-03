@@ -12,7 +12,7 @@ appenders:
     policy:
       trigger:
         kind: size
-        limit: 50kb
+        limit: 500kb
       roller:
         kind: delete
   db_file:
@@ -23,11 +23,11 @@ appenders:
     policy:
       trigger:
         kind: size
-        limit: 50kb
+        limit: 500kb
       roller:
         kind: delete
 root:
-  level: trace
+  level: debug
   appenders:
     - stdout
     - default_file
