@@ -21,7 +21,7 @@ async fn main() -> Result<(), Error> {
     let matches = App::new("Age of Empires Leaderboard Crawler")
         .version("1.0")
         .author("Stefan Hoefler")
-        .arg(Arg::with_name("DB String")
+        .arg(Arg::with_name("db_string")
                 .short("db")
                 .long("database")
                 .value_names(&["Connection String"])
@@ -47,6 +47,21 @@ async fn main() -> Result<(), Error> {
        Some("4v4") => TeamSize::T4v4,
        _=> panic!("Team Size is not correct")
    };
+   
+
+   let conn_str = match matches.value_of("db_string") {
+       Some(val) => val.to_string(),
+       _ =>  
+        std::env::var("DATABASE_URL").expect("Env var DATABASE_URL is required or provide one in the command line")
+   };
+    let pool = sqlx::PgPool::connect(&conn_str).await?;
+
+    let mut transaction = pool.begin().await?;
+
+    sqlx::migrate!()
+    .run(&pool)
+    .await?;
+
 
     crawl_aoe4_every_leaderboard(team_size, client).await;
     Ok(())
