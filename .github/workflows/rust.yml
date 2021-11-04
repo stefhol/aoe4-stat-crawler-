@@ -30,4 +30,8 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: crawler_x86_musl
-        path: ./crawler/target/x86_64-unknown-linux-musl/release/crawler
+        path: |
+          ./crawler/target/x86_64-unknown-linux-musl/release/crawler
+          ./crawler/config
+          ./crawler/migrations
+          ./crawler/db
