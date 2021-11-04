@@ -14,12 +14,13 @@ jobs:
     
     runs-on: ubuntu-latest
     name: build release
+    defaults:
+      run:
+        working-directory: ./crawler
     steps:
     - uses: actions/checkout@v2
     - name: prepare
       run: rustup target add x86_64-unknown-linux-musl
-    - name: cd into directory
-      run: cd ./crawler
     - name: Build
       run: cargo build --release --target x86_64-unknown-linux-musl 
     - name: Run tests
