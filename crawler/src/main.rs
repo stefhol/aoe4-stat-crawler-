@@ -1,5 +1,5 @@
 use core::time;
-use std::{io::Read, str::FromStr, thread, time::Duration};
+use std::{ str::FromStr, thread, time::Duration};
 
 mod actor;
 mod model;
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Error> {
     log4rs::init_file("config/log4rs.yml", Default::default()).unwrap();
     let client = reqwest::Client::builder()
     .user_agent(
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0",
+        "Leaderboard Crawler for age4.info v1.0",
     )
     .build()?;
     let matches = App::new("Age of Empires Leaderboard Crawler")
@@ -71,34 +71,8 @@ async fn main() -> Result<(), Error> {
                 .to_owned(),
         )
         .await?;
+    //start db migration check
     sqlx::migrate!().run(&pool).await?;
-    // add_leaderboard_page_to_db(&pool,&Leaderboard{
-    //     count:1,
-    //     request:Some(model::request::AgeOfEmpiresLeaderboardRequest{
-    //         count:1,page:1,
-    //         match_type:MatchType::Unranked,
-    //         region:Region::Global,
-    //         search_player:"".to_string(),
-    //         team_size:Some(TeamSize::T1v1),
-    //         versus:Versus::AI
-    //     }),
-    //     items:vec![model::leaderboard::LeaderboardEntry{
-    //         avatar_url:None,
-    //         elo:0,
-    //         elo_rating:0,
-    //         game_id:None,
-    //         losses:1,
-    //         player_number:None,
-    //         rank:1,
-    //         region:"0".to_string(),
-    //         rl_user_id:34,
-    //         user_id:None,
-    //         username:"Username".to_string(),
-    //         win_percent:1.1,
-    //         win_streak:2,
-    //         wins:23
-    //     }]
-    // }).await;
     crawl_aoe4_every_leaderboard(team_size, client, &pool).await;
     Ok(())
 }
