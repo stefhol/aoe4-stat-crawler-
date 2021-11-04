@@ -19,10 +19,15 @@ jobs:
       image: clux/muslrust
     steps:
     - uses: actions/checkout@v2
+    - name: Link to predefined musl toolchain
+      run: |
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+    
     - name: Build
       run: cargo build --release
     - uses: actions/upload-artifact@v2
       with:
         name: Crawler
-        path: target/x86_64-unknown-linux-musl/build
+        path: target/release/build
  
