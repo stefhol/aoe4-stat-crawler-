@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 time = "0.3.4"
-sqlx = { version = "0.5.9", features = [ "runtime-tokio-rustls","migrate","postgres","macros","uuid","time","tls"] }
+sqlx = { version = "0.5.9", features = [ "runtime-tokio-rustls","migrate","postgres","macros","uuid","time","tls","offline"] }
 dotenv = "0.15.0"
 anyhow = "1.0.44"
 clap = "2.33.3"

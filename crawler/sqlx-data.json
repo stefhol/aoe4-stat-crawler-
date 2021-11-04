@@ -1,0 +1,232 @@
+{
+  "db": "PostgreSQL",
+  "4c123a35c5442f798a14292650ae97db900f71bc7b8ee7add135e88a00b91d8b": {
+    "query": "SELECT id FROM player WHERE rl_user_id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "883543cd86d9b635de9fcb513c0218c69c3b6effd7603ed083a04ce245351bec": {
+    "query": "\n                    INSERT INTO match_history(\n                        elo,\n                        elo_rating,\n                        rank,\n                        wins,\n                        losses,\n                        win_streak,\n                        match_type,\n                        team_size,\n                        versus\n                    )\n                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Int4",
+          "Int4",
+          "Int4",
+          "Int4",
+          {
+            "Custom": {
+              "name": "match_type",
+              "kind": {
+                "Enum": [
+                  "unranked",
+                  "ranked",
+                  "custom"
+                ]
+              }
+            }
+          },
+          {
+            "Custom": {
+              "name": "team_size",
+              "kind": {
+                "Enum": [
+                  "1v1",
+                  "2v2",
+                  "3v3",
+                  "4v4",
+                  "custom"
+                ]
+              }
+            }
+          },
+          {
+            "Custom": {
+              "name": "versus",
+              "kind": {
+                "Enum": [
+                  "ai",
+                  "players"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "a46690186f9300d40857d1e61a1ce4948a73d6da0794a5d69e3acaa31c9b636f": {
+    "query": "\n                        INSERT INTO player_match_history(player_id,match_history_id)\n                        VALUES($1,$2)\n                        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "c055612e8228b10ba62253f278b4d8ceb4adf4be726046696a6d018848e5ef17": {
+    "query": "\n                    UPDATE player\n                    SET username = $2, avatar_url = $3, region = $4\n                    WHERE id = $1\n                    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Varchar",
+          "Varchar",
+          "Varchar"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "cd7dc81bc3f5c8065607470d5c06ae3315e75b0081918e622113020e6e206cff": {
+    "query": "\n                    SELECT \n                    match_type as \"match_type:MatchType\",\n                    team_size as \"team_size:TeamSize\",\n                    versus as \"versus:Versus\",\n                    rank,\n                    elo,\n                    wins,\n                    losses,\n                    win_streak\n                     FROM match_history \n                    join player_match_history on match_history.id = match_history_id\n                    where player_id = $1\n                    ORDER BY time DESC\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "match_type:MatchType",
+          "type_info": {
+            "Custom": {
+              "name": "match_type",
+              "kind": {
+                "Enum": [
+                  "unranked",
+                  "ranked",
+                  "custom"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 1,
+          "name": "team_size:TeamSize",
+          "type_info": {
+            "Custom": {
+              "name": "team_size",
+              "kind": {
+                "Enum": [
+                  "1v1",
+                  "2v2",
+                  "3v3",
+                  "4v4",
+                  "custom"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 2,
+          "name": "versus:Versus",
+          "type_info": {
+            "Custom": {
+              "name": "versus",
+              "kind": {
+                "Enum": [
+                  "ai",
+                  "players"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 3,
+          "name": "rank",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "elo",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "wins",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "losses",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "win_streak",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "f808401e092730891378ea449624d525ac1426d5e461e15627fbd99ce7be03ac": {
+    "query": "\n                    INSERT INTO player ( rl_user_id, username,region,avatar_url) \n                    VALUES ( $1 ,$2,$3,$4 ) RETURNING id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Varchar",
+          "Varchar",
+          "Varchar"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  }
+}
