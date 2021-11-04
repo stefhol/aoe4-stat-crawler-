@@ -29,6 +29,6 @@ jobs:
       run: cargo build --release
     - uses: actions/upload-artifact@v2
       with:
-        name: Crawler
-        path: ./target/release/build
+        name: crawler
+        path: ./target/x86_64-unknown-linux-musl/release/
  
