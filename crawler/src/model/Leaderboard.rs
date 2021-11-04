@@ -1,55 +1,55 @@
 use serde::{Deserialize, Serialize};
 
-use super::Request::AgeOfEmpiresLeaderboardRequest;
+use super::request::AgeOfEmpiresLeaderboardRequest;
 
 
 #[derive(Debug,Clone,Serialize, Deserialize)]
 pub struct Leaderboard {
     pub request:Option<AgeOfEmpiresLeaderboardRequest>,
     pub count:u32,
-    items:Vec<LeaderboardEntry>
+    pub items:Vec<LeaderboardEntry>
 }
 #[derive(Debug,Clone,Serialize, Deserialize)]
 pub struct LeaderboardEntry{
     #[serde(rename = "gameId")]
-    game_id: Option<serde_json::Value>,
+    pub game_id: Option<serde_json::Value>,
 
     #[serde(rename = "userId")]
-    user_id: Option<serde_json::Value>,
+    pub user_id: Option<serde_json::Value>,
 
     #[serde(rename = "rlUserId")]
-    rl_user_id: i64,
+    pub rl_user_id: i64,
 
     #[serde(rename = "userName")]
-    user_name: String,
+    pub username: String,
 
     #[serde(rename = "avatarUrl")]
-    avatar_url: Option<String>,
+    pub avatar_url: Option<String>,
 
     #[serde(rename = "playerNumber")]
-    player_number: Option<serde_json::Value>,
+    pub player_number: Option<serde_json::Value>,
 
     #[serde(rename = "elo")]
-    elo: u64,
+    pub elo: i32,
 
     #[serde(rename = "eloRating")]
-    elo_rating: u64,
+    pub elo_rating: i32,
 
     #[serde(rename = "rank")]
-    rank: u64,
+    pub rank: i32,
 
     #[serde(rename = "region")]
-    region: String,
+    pub region: String,
 
     #[serde(rename = "wins")]
-    wins: u64,
+    pub wins: i32,
 
     #[serde(rename = "winPercent")]
-    win_percent: f64,
+    pub win_percent: f64,
 
     #[serde(rename = "losses")]
-    losses: u64,
+    pub losses: i32,
 
     #[serde(rename = "winStreak")]
-    win_streak: i64,
+    pub win_streak: i32,
 }

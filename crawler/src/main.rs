@@ -1,23 +1,31 @@
 use core::time;
-use std::{collections::HashMap, net::SocketAddr, thread};
+use std::{io::Read, str::FromStr, thread, time::Duration};
+
 mod actor;
 mod model;
+use crate::model::request::MatchType;
+use crate::model::{
+    leaderboard::Leaderboard,
+    request::{Region, TeamSize, Versus},
+};
 use anyhow::Error;
 use clap::{App, Arg};
 use log::{error, info};
 use reqwest::Client;
-
-use crate::model::{
-    Leaderboard::{Leaderboard, LeaderboardEntry},
-    Request::{Region, TeamSize, Versus},
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    query, ConnectOptions, PgPool,
 };
+use uuid::Uuid;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
     log4rs::init_file("config/log4rs.yml", Default::default()).unwrap();
-
-    let client = reqwest::Client::new();
-
+    let client = reqwest::Client::builder()
+    .user_agent(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0",
+    )
+    .build()?;
     let matches = App::new("Age of Empires Leaderboard Crawler")
         .version("1.0")
         .author("Stefan Hoefler")
@@ -40,39 +48,69 @@ async fn main() -> Result<(), Error> {
         )
         .get_matches();
 
-   let team_size:TeamSize = match matches.value_of("team_size") {
-       Some("1v1") => TeamSize::T1v1,
-       Some("2v2") => TeamSize::T2v2,
-       Some("3v3") => TeamSize::T3v3,
-       Some("4v4") => TeamSize::T4v4,
-       _=> panic!("Team Size is not correct")
-   };
-   
+    let team_size: TeamSize = match matches.value_of("team_size") {
+        Some("1v1") => TeamSize::T1v1,
+        Some("2v2") => TeamSize::T2v2,
+        Some("3v3") => TeamSize::T3v3,
+        Some("4v4") => TeamSize::T4v4,
+        _ => panic!("Team Size is not correct"),
+    };
+    let conn_str = match matches.value_of("db_string") {
+        Some(val) => val.to_string(),
+        _ => dotenv::var("DATABASE_URL")
+            .expect("Env var DATABASE_URL is required or provide one in the command line"),
+    };
 
-   let conn_str = match matches.value_of("db_string") {
-       Some(val) => val.to_string(),
-       _ =>  
-        std::env::var("DATABASE_URL").expect("Env var DATABASE_URL is required or provide one in the command line")
-   };
-    let pool = sqlx::PgPool::connect(&conn_str).await?;
-
-    let mut transaction = pool.begin().await?;
-
-    sqlx::migrate!()
-    .run(&pool)
-    .await?;
-
-
-    crawl_aoe4_every_leaderboard(team_size, client).await;
+    let pool = PgPoolOptions::new()
+        .connect_with(
+            PgConnectOptions::from_str(&conn_str)
+                .unwrap()
+                .application_name("Age4.info Crawler")
+                .log_statements(log::LevelFilter::Trace)
+                .log_slow_statements(log::LevelFilter::Trace, Duration::from_secs(1))
+                .to_owned(),
+        )
+        .await?;
+    sqlx::migrate!().run(&pool).await?;
+    // add_leaderboard_page_to_db(&pool,&Leaderboard{
+    //     count:1,
+    //     request:Some(model::request::AgeOfEmpiresLeaderboardRequest{
+    //         count:1,page:1,
+    //         match_type:MatchType::Unranked,
+    //         region:Region::Global,
+    //         search_player:"".to_string(),
+    //         team_size:Some(TeamSize::T1v1),
+    //         versus:Versus::AI
+    //     }),
+    //     items:vec![model::leaderboard::LeaderboardEntry{
+    //         avatar_url:None,
+    //         elo:0,
+    //         elo_rating:0,
+    //         game_id:None,
+    //         losses:1,
+    //         player_number:None,
+    //         rank:1,
+    //         region:"0".to_string(),
+    //         rl_user_id:34,
+    //         user_id:None,
+    //         username:"Username".to_string(),
+    //         win_percent:1.1,
+    //         win_streak:2,
+    //         wins:23
+    //     }]
+    // }).await;
+    crawl_aoe4_every_leaderboard(team_size, client, &pool).await;
     Ok(())
 }
 
-async fn crawl_aoe4_every_leaderboard(team_size: TeamSize, client: Client) {
+//////
+/// Gets every page out of the leaderboard then passes this page to crawl_aoe4_single_leaderboard_page
+async fn crawl_aoe4_every_leaderboard(team_size: TeamSize, client: Client, transaction: &PgPool) {
     //Inital Request has to be performed to know how many sites there are
     let inital_request = crawl_aoe4_singel_leaderboard(1, &team_size, &client).await;
     log_status(&inital_request, &1);
     if let Ok(leaderboard) = inital_request {
-        add_leaderboard_page_to_db("", &leaderboard);
+        add_leaderboard_page_to_db(transaction, &leaderboard).await;
         let mut page_number: u32 = 1;
         //get maximum pages
         if let Some(request) = &leaderboard.request {
@@ -89,14 +127,13 @@ async fn crawl_aoe4_every_leaderboard(team_size: TeamSize, client: Client) {
             let request = crawl_aoe4_singel_leaderboard(page, &team_size, &client).await;
             log_status(&request, &page);
             if let Ok(leaderboard) = request {
-                add_leaderboard_page_to_db("", &leaderboard);
+                add_leaderboard_page_to_db(transaction, &leaderboard).await;
             }
         }
     }
 }
-/**
- * Logs if request was succesfull
- */
+///
+/// Prints if it was succesfull to request the aoe4 db api
 fn log_status(leaderboard: &Result<Leaderboard, Error>, page: &u32) {
     match leaderboard {
         Ok(_) => info!("succesfull requested page {}", page),
@@ -106,12 +143,14 @@ fn log_status(leaderboard: &Result<Leaderboard, Error>, page: &u32) {
         }
     };
 }
+//////
+/// Crawls single page of a leaderboard
 async fn crawl_aoe4_singel_leaderboard(
     page: u32,
     team_size: &TeamSize,
     client: &Client,
 ) -> Result<Leaderboard, Error> {
-    let mut request = model::Request::AgeOfEmpiresLeaderboardRequest::new(
+    let request = model::request::AgeOfEmpiresLeaderboardRequest::new(
         page,
         Region::Global,
         Some(team_size.to_owned()),
@@ -129,6 +168,201 @@ async fn crawl_aoe4_singel_leaderboard(
     res.request = Some(request.to_owned());
     Ok(res)
 }
-fn add_leaderboard_page_to_db(conn: &str, leaderboard: &Leaderboard) {
+//////
+/// Adds Leaderboard page to the DB
+async fn add_leaderboard_page_to_db(pool: &PgPool, leaderboard: &Leaderboard) {
     info!("Saving Leaderboard Page to db");
+    if let Some(request) = &leaderboard.request {
+        for leaderboard_entry in &leaderboard.items {
+            //check if player exists
+            let player_result = query!(
+                "SELECT id FROM player WHERE rl_user_id = $1",
+                leaderboard_entry.rl_user_id
+            )
+            .fetch_optional(pool)
+            .await;
+            //db player is already in
+            if let Ok(player_option) = player_result {
+                let mut player_id: Uuid = Uuid::nil();
+                //db player option
+                if let Some(db_player) = player_option {
+                    let rows_affected = query!(
+                        r#"
+                    UPDATE player
+                    SET username = $2, avatar_url = $3, region = $4
+                    WHERE id = $1
+                    "#,
+                        db_player.id,
+                        leaderboard_entry.username,
+                        leaderboard_entry.avatar_url,
+                        leaderboard_entry.region
+                    )
+                    .execute(pool)
+                    .await;
+                    //saving db player id
+                    player_id = db_player.id;
+                    if let Ok(_) = rows_affected {
+                        info!(target:"db", "update player");
+                    } else {
+                        error!(target:"db","updating player error")
+                    }
+                }
+                //db player needs to be inserted
+                else {
+                    let query_player = query!(
+                        r#"
+                    INSERT INTO player ( rl_user_id, username,region,avatar_url) 
+                    VALUES ( $1 ,$2,$3,$4 ) RETURNING id"#,
+                        leaderboard_entry.rl_user_id,
+                        leaderboard_entry.username,
+                        leaderboard_entry.region,
+                        leaderboard_entry.avatar_url
+                    )
+                    .fetch_one(pool)
+                    .await;
+                    if let Ok(player) = query_player {
+                        info!(target:"db", "insert player");
+                        player_id = player.id;
+                    } else {
+                        error!(target:"db","error inserting player");
+                    }
+                }
+                //lets check if the player played a new match
+                let query_match_history = query!(
+                    r#"
+                    SELECT 
+                    match_type as "match_type:MatchType",
+                    team_size as "team_size:TeamSize",
+                    versus as "versus:Versus",
+                    rank,
+                    elo,
+                    wins,
+                    losses,
+                    win_streak
+                     FROM match_history 
+                    join player_match_history on match_history.id = match_history_id
+                    where player_id = $1
+                    ORDER BY time DESC
+                "#,
+                    player_id
+                )
+                .fetch_optional(pool)
+                .await;
+                match query_match_history {
+                    Ok(_) => info!(target:"db","selecting newest match from player:{}",player_id),
+                    _ => {
+                        error!(target:"db","error selecting newest match from player:{}",player_id)
+                    }
+                }
+                let mut same_match = false;
+                if let Ok(possible_latest_match) = query_match_history {
+                    if let Some(latest_match) = possible_latest_match {
+                        let request_team_size = match &request.team_size {
+                            Some(team_size) => team_size.to_owned(),
+                            None => TeamSize::Custom,
+                        };
+                        if latest_match.match_type == request.match_type {
+                            if latest_match.team_size == request_team_size {
+                                if latest_match.versus == request.versus {
+                                    if latest_match.rank == leaderboard_entry.rank {
+                                        if latest_match.elo == leaderboard_entry.elo {
+                                            if latest_match.wins == leaderboard_entry.wins {
+                                                if latest_match.losses == leaderboard_entry.losses {
+                                                    if latest_match.win_streak
+                                                        == leaderboard_entry.win_streak
+                                                    {
+                                                        same_match = true;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if same_match == false {
+                    //now we have the player
+                    //and he played a new match
+                    //add the match and connect it
+                    let team_size = match &leaderboard.request {
+                        Some(request) => match request.team_size.to_owned() {
+                            Some(team_size) => team_size,
+                            None => TeamSize::Custom,
+                        },
+                        None => TeamSize::Custom,
+                    };
+                    let match_type = match &leaderboard.request {
+                        Some(request) => request.match_type.to_owned(),
+                        None => MatchType::Custom,
+                    };
+                    let versus = match &leaderboard.request {
+                        Some(request) => request.versus.to_owned(),
+                        None => Versus::Players,
+                    };
+                    // Insert Match history
+                    let query_match_history = query!(
+                        r#"
+                    INSERT INTO match_history(
+                        elo,
+                        elo_rating,
+                        rank,
+                        wins,
+                        losses,
+                        win_streak,
+                        match_type,
+                        team_size,
+                        versus
+                    )
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
+                "#,
+                        leaderboard_entry.elo,
+                        leaderboard_entry.elo_rating,
+                        leaderboard_entry.rank,
+                        leaderboard_entry.wins,
+                        leaderboard_entry.losses,
+                        leaderboard_entry.win_streak,
+                        match_type as MatchType,
+                        team_size as TeamSize,
+                        versus as Versus
+                    )
+                    .fetch_one(pool)
+                    .await;
+                    match query_match_history {
+                        Ok(_) => info!(target:"db","insert match_history"),
+                        _ => error!(target:"db","error inserting match_history"),
+                    };
+
+                    // Connect match history with player
+                    if let Ok(match_history) = query_match_history {
+                        let combine = query!(
+                            r#"
+                        INSERT INTO player_match_history(player_id,match_history_id)
+                        VALUES($1,$2)
+                        "#,
+                            player_id,
+                            match_history.id
+                        )
+                        .execute(pool)
+                        .await;
+                        match combine {
+                            Ok(_) => info!(target:"db","insert player_match_history"),
+                            _ => error!(target:"db","error inserting player_match_history"),
+                        };
+                    }
+                } else {
+                    info!(target:"db","Skipping insert match for user: {}. Last match is identical to the new match",player_id);
+                }
+            } else {
+                error!(target:"db",
+                    "select player error! rl_user_id = {}",
+                    leaderboard_entry.rl_user_id
+                )
+            }
+        }
+    } else {
+        error!("Leaderboard has no request")
+    }
 }
+

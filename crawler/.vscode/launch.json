@@ -19,27 +19,11 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "--team_size",
+                "1v1"
+            ],
             "cwd": "${workspaceFolder}"
         },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'crawler'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=crawler",
-                    "--package=crawler"
-                ],
-                "filter": {
-                    "name": "crawler",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        }
     ]
 }
