@@ -19,10 +19,6 @@ jobs:
       image: clux/muslrust
     steps:
     - uses: actions/checkout@v2
-    - name: install openssl
-      run: |
-        sudo apt install libssl-dev -y
-        sudo apt install pkg-config -y
     - name: prepare
       run: rustup target add x86_64-unknown-linux-musl
     - name: Build
