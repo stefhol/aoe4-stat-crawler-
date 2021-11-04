@@ -11,6 +11,8 @@ jobs:
     
     runs-on: ubuntu-latest
     name: build release
+    env:
+      OPENSSL_SSL_LIBRARIES: /usr/local/ssl/lib
     defaults:
       run:
         working-directory: ./crawler
