@@ -16,6 +16,10 @@ jobs:
         working-directory: ./crawler
     steps:
     - uses: actions/checkout@v2
+    - name: install openssl
+      run: |
+        apt install libssl
+        apt install libssl-dev
     - name: prepare
       run: rustup target add x86_64-unknown-linux-musl
     - name: Build
