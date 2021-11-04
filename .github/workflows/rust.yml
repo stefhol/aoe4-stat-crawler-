@@ -11,7 +11,8 @@ jobs:
     
     runs-on: ubuntu-latest
     name: build release
-    
+    env:
+      SQLX_OFFLINE: true
     defaults:
       run:
         working-directory: ./crawler
