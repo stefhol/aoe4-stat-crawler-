@@ -21,7 +21,7 @@
             },
             "args": [
                 "--team_size",
-                "1v1"
+                "1v1",
             ],
             "cwd": "${workspaceFolder}"
         },

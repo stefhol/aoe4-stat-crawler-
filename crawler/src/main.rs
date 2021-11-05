@@ -1,4 +1,5 @@
 use core::time;
+use std::path::Path;
 use std::{ str::FromStr, thread, time::Duration};
 
 mod actor;
@@ -20,7 +21,6 @@ use uuid::Uuid;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
-    log4rs::init_file("config/log4rs.yml", Default::default()).unwrap();
     let client = reqwest::Client::builder()
     .user_agent(
         "Leaderboard Crawler for age4.info v1.0",
@@ -35,6 +35,15 @@ async fn main() -> Result<(), Error> {
                 .value_names(&["Connection String"])
                 .help("provides a custom connection string if non provided uses DATABASE_URL out of env. Only supporting PostgresSql")
         )
+        .arg(Arg::with_name("workplace_folder")
+                .short("wf")
+                .long("workplace_folder")
+                .value_names(&["Path to folder where migrations and config is in"])
+                .help("For Crawler to work there needs to be a place where migrations and logging conf is located\n
+                 Should point to a folder where a config and migrations folder is in\n
+                 Can be provided a a env WORKPLACE_FOLDER
+                \n")
+        )
         .arg(
             Arg::with_name("team_size")
                 .value_names(&["team_size"])
@@ -48,6 +57,18 @@ async fn main() -> Result<(), Error> {
         )
         .get_matches();
 
+        let workplace_path = match matches.value_of("workplace_folder") {
+        Some(val) => val.to_string(),
+        _ => dotenv::var("WORKPLACE_FOLDER")
+            .expect("Env var WORKPLACE_FOLDER is required or provide one in the command line"),
+    };
+    let workplace_path = Path::new(&workplace_path);
+    let config_location = "config/log4rs.yml";
+    let config_location = workplace_path.join(config_location);
+    let config_location = config_location.to_str().unwrap();
+    let error = format!("config location can not be found: {:?}", &config_location);
+    log4rs::init_file(config_location, Default::default()).expect(&error);
+
     let team_size: TeamSize = match matches.value_of("team_size") {
         Some("1v1") => TeamSize::T1v1,
         Some("2v2") => TeamSize::T2v2,
@@ -60,7 +81,7 @@ async fn main() -> Result<(), Error> {
         _ => dotenv::var("DATABASE_URL")
             .expect("Env var DATABASE_URL is required or provide one in the command line"),
     };
-
+    
     let pool = PgPoolOptions::new()
         .connect_with(
             PgConnectOptions::from_str(&conn_str)
@@ -72,7 +93,12 @@ async fn main() -> Result<(), Error> {
         )
         .await?;
     //start db migration check
-    sqlx::migrate!().run(&pool).await?;
+    let migrations_folder = workplace_path.join("migrations");
+    let migrations_folder = migrations_folder.to_str().unwrap();
+    match sqlx::migrate!("./migrations").run(&pool).await{
+        Ok(_)=> info!("Applying migrations"),
+        Err(_) => error!("Migrations folder not found skipping:{}",migrations_folder),
+    };
     crawl_aoe4_every_leaderboard(team_size, client, &pool).await;
     Ok(())
 }
