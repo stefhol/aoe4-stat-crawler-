@@ -11,17 +11,27 @@ jobs:
     
     runs-on: ubuntu-latest
     name: build release
+    env:
+      SQLX_OFFLINE: true
     defaults:
       run:
         working-directory: ./crawler
+    container:
+      image: clux/muslrust
     steps:
     - uses: actions/checkout@v2
-    - name: prepare
-      run: rustup target add x86_64-unknown-linux-musl
+    - name: Link to predefined musl toolchain
+      run: |
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+    
     - name: Build
-      run: cargo build --release --target x86_64-unknown-linux-musl 
+      run: cargo build --release
     - uses: actions/upload-artifact@v2
       with:
-        name: Crawler
-        path: target/x86_64-unknown-linux-musl/build
- 
+        name: crawler_x86_musl
+        path: |
+          ./crawler/target/x86_64-unknown-linux-musl/release/crawler
+          ./crawler/config
+          ./crawler/migrations
+          ./crawler/db
