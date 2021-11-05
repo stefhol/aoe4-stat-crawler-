@@ -1,6 +1,6 @@
 use core::time;
 use std::path::Path;
-use std::{ str::FromStr, thread, time::Duration};
+use std::{str::FromStr, thread, time::Duration};
 
 mod actor;
 mod model;
@@ -9,10 +9,11 @@ use crate::model::{
     leaderboard::Leaderboard,
     request::{Region, TeamSize, Versus},
 };
+use async_recursion::async_recursion;
 use anyhow::Error;
 use clap::{App, Arg};
 use log::{error, info};
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     query, ConnectOptions, PgPool,
@@ -21,11 +22,10 @@ use uuid::Uuid;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
+    let tries_connection = 0;
     let client = reqwest::Client::builder()
-    .user_agent(
-        "Leaderboard Crawler for age4.info v1.0",
-    )
-    .build()?;
+        .user_agent("Leaderboard Crawler for age4.info v1.1")
+        .build()?;
     let matches = App::new("Age of Empires Leaderboard Crawler")
         .version("1.0")
         .author("Stefan Hoefler")
@@ -57,7 +57,7 @@ async fn main() -> Result<(), Error> {
         )
         .get_matches();
 
-        let workplace_path = match matches.value_of("workplace_folder") {
+    let workplace_path = match matches.value_of("workplace_folder") {
         Some(val) => val.to_string(),
         _ => dotenv::var("WORKPLACE_FOLDER")
             .expect("Env var WORKPLACE_FOLDER is required or provide one in the command line"),
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Error> {
         _ => dotenv::var("DATABASE_URL")
             .expect("Env var DATABASE_URL is required or provide one in the command line"),
     };
-    
+
     let pool = PgPoolOptions::new()
         .connect_with(
             PgConnectOptions::from_str(&conn_str)
@@ -93,20 +93,52 @@ async fn main() -> Result<(), Error> {
         )
         .await?;
     //start db migration check
-    let migrations_folder = workplace_path.join("migrations");
-    let migrations_folder = migrations_folder.to_str().unwrap();
-    match sqlx::migrate!("./migrations").run(&pool).await{
-        Ok(_)=> info!("Applying migrations"),
-        Err(_) => error!("Migrations folder not found skipping:{}",migrations_folder),
+    match sqlx::migrate!().run(&pool).await {
+        Ok(_) => info!("Applying migrations"),
+        Err(_) => error!("Migrations folder not found skipping"),
     };
-    crawl_aoe4_every_leaderboard(team_size, client, &pool).await;
+    crawl_aoe4_every_leaderboard(team_size, client, &pool, tries_connection).await;
     Ok(())
 }
-
+#[async_recursion]
+async fn prepare_db_inject(
+    page: u32,
+    transaction: &PgPool,
+    team_size: &TeamSize,
+    client: &Client,
+    mut tries_connection: u8,
+) {
+    //wait before requesting to not spam the server with too much at the same time
+    thread::sleep(time::Duration::from_secs(2));
+    let request = crawl_aoe4_singel_leaderboard(page, &team_size, &client).await;
+    log_status(&request, &page);
+    if let Ok(leaderboard) = request {
+        add_leaderboard_page_to_db(transaction, &leaderboard).await;
+    } else if let Err(err) = request {
+        error!("{}", err);
+        if tries_connection < 10 {
+            error!("Retrying one more time");
+            tries_connection += 1;
+            prepare_db_inject(page, transaction, team_size, client, tries_connection).await;
+        } else {
+            error!(
+                "Server failed a total of {} times. Aborting",
+                tries_connection
+            );
+        }
+    }
+}
 //////
 /// Gets every page out of the leaderboard then passes this page to crawl_aoe4_single_leaderboard_page
-async fn crawl_aoe4_every_leaderboard(team_size: TeamSize, client: Client, transaction: &PgPool) {
+#[async_recursion]
+async fn crawl_aoe4_every_leaderboard(
+    team_size: TeamSize,
+    client: Client,
+    transaction: &PgPool,
+    mut tries_connection: u8,
+) {
     //Inital Request has to be performed to know how many sites there are
+    tries_connection += 1;
     let inital_request = crawl_aoe4_singel_leaderboard(1, &team_size, &client).await;
     log_status(&inital_request, &1);
     if let Ok(leaderboard) = inital_request {
@@ -122,13 +154,23 @@ async fn crawl_aoe4_every_leaderboard(team_size: TeamSize, client: Client, trans
         }
         // crawl every page
         for page in 2..page_number + 1 {
-            //wait before requesting to not spam the server with too much at the same time
+            prepare_db_inject(page, transaction, &team_size, &client, tries_connection).await;
+        }
+    } else if let Err(err) = inital_request {
+        error!("{}", err);
+
+        if tries_connection < 5 {
             thread::sleep(time::Duration::from_secs(2));
-            let request = crawl_aoe4_singel_leaderboard(page, &team_size, &client).await;
-            log_status(&request, &page);
-            if let Ok(leaderboard) = request {
-                add_leaderboard_page_to_db(transaction, &leaderboard).await;
-            }
+            error!(
+                "Error trying to get initial page. Retry: {}",
+                &tries_connection
+            );
+            crawl_aoe4_every_leaderboard(team_size, client, &transaction, tries_connection).await;
+        } else {
+            error!(
+                "Cant get connection to server after {} tries",
+                &tries_connection
+            );
         }
     }
 }
@@ -157,16 +199,35 @@ async fn crawl_aoe4_singel_leaderboard(
         Versus::Players,
     );
 
-    let mut res: Leaderboard = client
+    let res = client
         .post("https://api.ageofempires.com/api/ageiv/Leaderboard")
         .json(&request)
         .send()
-        .await?
-        .json()
-        .await?;
-    //add request to know what type is retrieved
-    res.request = Some(request.to_owned());
-    Ok(res)
+        .await;
+    let res: Result<reqwest::Response, anyhow::Error> = match res {
+        Ok(response) => {
+            if response.status() == StatusCode::OK {
+                Ok(response)
+            } else {
+                Err(anyhow::anyhow!("{} Status Code", response.status()))
+            }
+        }
+        Err(err) => Err(anyhow::anyhow!("{:?}", err)),
+    };
+    let res = res?;
+    let res_str = res.text().await?;
+    let res_json:Result<Leaderboard,_> = serde_json::from_str(&res_str);
+    return match res_json {
+        Ok(mut leaderboard) => {
+            leaderboard.request = Some(request);
+            Ok(leaderboard)
+        },
+        Err(err) => {
+            error!("Error Parsing content as Leaderboard.");
+            error!("Content: {}", res_str);
+            Err(anyhow::anyhow!("{}", err))
+        }
+    };
 }
 //////
 /// Adds Leaderboard page to the DB
@@ -365,4 +426,3 @@ async fn add_leaderboard_page_to_db(pool: &PgPool, leaderboard: &Leaderboard) {
         error!("Leaderboard has no request")
     }
 }
-
