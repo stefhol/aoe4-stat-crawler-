@@ -1,0 +1,18 @@
+syntax = "proto3";
+package player;
+service PlayerPage {
+    rpc GetPlayerHistoryMatches (RlUserId) returns (MatchHistoryReply);
+    
+}
+
+message RlUserId {
+    // Request message contains the name to be greeted
+    string rlUserId = 1;
+}
+message MatchHistoryReply {
+    int32 count = 1;
+    repeated MatchHistoryEntrie entry = 2;
+}
+message MatchHistoryEntrie{
+    string name = 1;
+}

@@ -3,9 +3,9 @@ use std::path::Path;
 use std::{str::FromStr, thread, time::Duration};
 
 mod actor;
-mod model;
-use crate::model::request::MatchType;
-use crate::model::{
+use model;
+use model::model::request::MatchType;
+use model::model::{
     leaderboard::Leaderboard,
     request::{Region, TeamSize, Versus},
 };
@@ -192,7 +192,7 @@ async fn crawl_aoe4_singel_leaderboard(
     team_size: &TeamSize,
     client: &Client,
 ) -> Result<Leaderboard, Error> {
-    let request = model::request::AgeOfEmpiresLeaderboardRequest::new(
+    let request = model::model::request::AgeOfEmpiresLeaderboardRequest::new(
         page,
         Region::Global,
         Some(team_size.to_owned()),
