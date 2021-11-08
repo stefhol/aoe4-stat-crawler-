@@ -1,7 +1,6 @@
 
 use std::{net::SocketAddr, str::FromStr, time::Duration};
 use sqlx::{self, ConnectOptions, postgres::{PgConnectOptions, PgPoolOptions}};
-use actix::Actor;
 use anyhow::Error;
 mod services;
 use tonic;

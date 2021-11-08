@@ -7,12 +7,22 @@ service PlayerPage {
 
 message RlUserId {
     // Request message contains the name to be greeted
-    string rlUserId = 1;
+    int64 rlUserId = 1;
 }
 message MatchHistoryReply {
     int32 count = 1;
     repeated MatchHistoryEntrie entry = 2;
 }
 message MatchHistoryEntrie{
-    string name = 1;
+    string id = 1;
+    string time = 2;
+    int32 elo = 3;
+    int32 elo_rating = 4;
+    int32 rank = 5;
+    int32 wins = 6;
+    int32 losses = 7;
+    int32 win_streak = 8;
+    string match_type = 9;
+    string team_size = 10;
+    string versus = 11;
 }

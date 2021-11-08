@@ -1,25 +1,54 @@
+use crate::db;
 use crate::player::player_page_server::PlayerPage;
-use crate::player::{self, *};
 use crate::player::{MatchHistoryEntrie, MatchHistoryReply, RlUserId};
-use std::future::Future;
-use std::pin::Pin;
+use anyhow::Error;
+use itertools::Itertools;
 
-use actix::Addr;
-
+use model::model::db::MatchHistory;
+use serde::Serialize;
+use serde_json;
 use sqlx::PgPool;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
+use time::PrimitiveDateTime;
 use tonic::{async_trait, Request, Response, Status};
-use uuid::Uuid;
-
 #[derive(Clone, Debug)]
 pub struct Player {
-    pool:PgPool
+    pool: PgPool,
 }
-
+trait fromMatchHistory {
+    fn from_match_history(&self) -> MatchHistoryEntrie;
+}
+impl fromMatchHistory for MatchHistory {
+    fn from_match_history(&self) -> MatchHistoryEntrie {
+        MatchHistoryEntrie {
+            id: self.id.to_string(),
+            match_type: serde_json::to_value(&self.match_type)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+            team_size: serde_json::to_value(&self.team_size)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+            elo: self.elo,
+            time: self.time.format("%F"),
+            rank: self.rank,
+            elo_rating: self.elo_rating,
+            losses: self.losses,
+            wins: self.wins,
+            win_streak: self.win_streak,
+            versus: serde_json::to_value(&self.versus)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+        }
+    }
+}
 impl Player {
-    pub fn new(pool:PgPool) -> Self {
-        Self {pool}
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 }
 
@@ -28,7 +57,20 @@ impl PlayerPage for Player {
     async fn get_player_history_matches(
         &self,
         request: Request<RlUserId>,
-    ) -> Result<Response<MatchHistoryReply>, Status>{
-        Ok(Response::new(MatchHistoryReply{count:3,entry:vec![MatchHistoryEntrie{name:"test".to_string()}]}))
+    ) -> Result<Response<MatchHistoryReply>, Status> {
+        let match_history =
+            db::get_match_history(&self.pool, request.into_inner().rl_user_id).await;
+        if let Ok(match_history) = match_history {
+            let match_history: Vec<MatchHistoryEntrie> = match_history
+                .iter()
+                .map(|my_match| my_match.from_match_history())
+                .collect_vec();
+            Ok(Response::new(MatchHistoryReply {
+                count: match_history.len() as i32,
+                entry: match_history,
+            }))
+        } else {
+            Err(Status::invalid_argument("Id not found"))
+        }
     }
 }

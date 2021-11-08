@@ -1,33 +1,13 @@
 {
   "db": "PostgreSQL",
-  "e6ed5b4c86f21c22933f55f645811968a80e4bb4a1a61070e37b69c884f5d8e1": {
-    "query": "select * from player where rl_user_id = $1",
+  "34c6155e69d2f195da889b0cee246e60f26499181cccf27fdccc6a4368932d17": {
+    "query": "\n        select  (\n                match_history.id,\n                match_type,\n                team_size,\n                versus,\n                rank,\n                elo,\n                wins,\n                losses,\n                win_streak)\n                from player \n        INNER join player_match_history on player.id = player_id\n        inner join match_history on match_history.id = match_history_id \n        where player.rl_user_id = $1\n    ",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "id",
-          "type_info": "Uuid"
-        },
-        {
-          "ordinal": 1,
-          "name": "rl_user_id",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 2,
-          "name": "username",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "region",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 4,
-          "name": "avatar_url",
-          "type_info": "Varchar"
+          "name": "row",
+          "type_info": "Record"
         }
       ],
       "parameters": {
@@ -36,11 +16,7 @@
         ]
       },
       "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true
+        null
       ]
     }
   }

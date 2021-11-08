@@ -1,5 +1,7 @@
-use time::{PrimitiveDateTime};
+use sqlx::types::time::{PrimitiveDateTime};
 use uuid::Uuid;
+
+use super::request::{MatchType, TeamSize, Versus};
 
 
 #[derive(sqlx::FromRow)]
@@ -21,5 +23,7 @@ pub struct MatchHistory{
     pub wins:i32,
     pub losses:i32,
     pub win_streak:i32,
-    pub match_type:String
+    pub match_type:MatchType,
+    pub team_size:TeamSize,
+    pub versus:Versus
 }

@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+model = {path="../model"}
 dotenv = "0.15.0"
 tonic = "0.6"
 prost = "0.9"
@@ -21,8 +22,9 @@ actix-rt = "2.2"
 local-ip-address = "0.4.4"
 log = "0.4.14"
 log4rs = {version = "1.0.0", features = [ "default" ]}
-time = "0.3.4"
+time = { version = "0.3.4" ,features = ["formatting"]}
 sqlx = { version = "0.5.9", features = [ "runtime-tokio-native-tls","migrate","postgres","macros","uuid","time","tls","offline"] }
-
+serde = "1.0.130"
+serde_json = "1.0.68"
 [build-dependencies]
 tonic-build = "0.6"
