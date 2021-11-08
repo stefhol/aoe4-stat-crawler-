@@ -55,6 +55,7 @@ impl PlayerPage for Player {
         &self,
         request: Request<RlUserId>,
     ) -> Result<Response<MatchHistoryReply>, Status> {
+        // let time = time::Time::;
         let match_history =
             db::get_match_history(&self.pool, request.into_inner().rl_user_id).await;
         if let Ok(match_history) = match_history {
@@ -64,7 +65,7 @@ impl PlayerPage for Player {
                 .collect_vec();
             Ok(Response::new(MatchHistoryReply {
                 count: match_history.len() as i32,
-                entry: match_history,
+                matches: match_history,
             }))
         } else {
             Err(Status::invalid_argument("Id not found"))

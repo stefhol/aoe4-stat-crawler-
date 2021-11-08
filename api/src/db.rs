@@ -2,12 +2,13 @@ use anyhow::Error;
 use model::model::db::MatchHistory;
 #[allow(unused)]
 use model::model::request::{MatchType, Region, TeamSize, Versus};
-use sqlx::{ PgPool};
+use sqlx::PgPool;
+
 pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<MatchHistory>, Error> {
     let match_history = sqlx::query_as!(
         MatchHistory,
         r#"
-        select 
+        select
                 match_type as "match_type:MatchType",
                     team_size as "team_size:TeamSize",
                     versus as "versus:Versus",
@@ -23,8 +24,9 @@ pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<Mat
         INNER join player_match_history on player.id = player_id
         inner join match_history on match_history.id = match_history_id 
         where player.rl_user_id = $1
+        limit 100
     "#,
-        rl_user_id
+        rl_user_id,
     )
     .fetch_all(pool)
     .await?;

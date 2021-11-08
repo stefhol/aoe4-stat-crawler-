@@ -6,12 +6,12 @@ service PlayerPage {
 }
 
 message RlUserId {
-    // Request message contains the name to be greeted
     int64 rlUserId = 1;
+    string time = 2;
 }
 message MatchHistoryReply {
     int32 count = 1;
-    repeated MatchHistoryEntry entry = 2;
+    repeated MatchHistoryEntry matches = 2;
 }
 message MatchHistoryEntry{
     string id = 1;

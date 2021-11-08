@@ -22,7 +22,7 @@ actix-rt = "2.2"
 local-ip-address = "0.4.4"
 log = "0.4.14"
 log4rs = {version = "1.0.0", features = [ "default" ]}
-time = { version = "0.3.4" ,features = ["formatting"]}
+time = { version = "0.3.4" ,features = ["formatting","parsing"]}
 sqlx = { version = "0.5.9", features = [ "runtime-tokio-native-tls","migrate","postgres","macros","uuid","time","tls","offline"] }
 serde = "1.0.130"
 serde_json = "1.0.68"
