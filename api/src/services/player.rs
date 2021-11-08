@@ -1,25 +1,22 @@
 use crate::db;
 use crate::player::player_page_server::PlayerPage;
-use crate::player::{MatchHistoryEntrie, MatchHistoryReply, RlUserId};
-use anyhow::Error;
+use crate::player::{MatchHistoryEntry, MatchHistoryReply, RlUserId};
 use itertools::Itertools;
 
 use model::model::db::MatchHistory;
-use serde::Serialize;
 use serde_json;
 use sqlx::PgPool;
-use time::PrimitiveDateTime;
 use tonic::{async_trait, Request, Response, Status};
 #[derive(Clone, Debug)]
 pub struct Player {
     pool: PgPool,
 }
-trait fromMatchHistory {
-    fn from_match_history(&self) -> MatchHistoryEntrie;
+trait FromMatchHistory {
+    fn from_match_history(&self) -> MatchHistoryEntry;
 }
-impl fromMatchHistory for MatchHistory {
-    fn from_match_history(&self) -> MatchHistoryEntrie {
-        MatchHistoryEntrie {
+impl FromMatchHistory for MatchHistory {
+    fn from_match_history(&self) -> MatchHistoryEntry {
+        MatchHistoryEntry {
             id: self.id.to_string(),
             match_type: serde_json::to_value(&self.match_type)
                 .unwrap()
@@ -61,7 +58,7 @@ impl PlayerPage for Player {
         let match_history =
             db::get_match_history(&self.pool, request.into_inner().rl_user_id).await;
         if let Ok(match_history) = match_history {
-            let match_history: Vec<MatchHistoryEntrie> = match_history
+            let match_history: Vec<MatchHistoryEntry> = match_history
                 .iter()
                 .map(|my_match| my_match.from_match_history())
                 .collect_vec();

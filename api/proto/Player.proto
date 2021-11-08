@@ -11,9 +11,9 @@ message RlUserId {
 }
 message MatchHistoryReply {
     int32 count = 1;
-    repeated MatchHistoryEntrie entry = 2;
+    repeated MatchHistoryEntry entry = 2;
 }
-message MatchHistoryEntrie{
+message MatchHistoryEntry{
     string id = 1;
     string time = 2;
     int32 elo = 3;

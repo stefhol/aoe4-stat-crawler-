@@ -15,7 +15,10 @@ use tonic::transport::Server;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
-    log4rs::init_file("config/log4rs.yml", Default::default());
+    match log4rs::init_file("config/log4rs.yml", Default::default()) {
+        Ok(_) => {},
+        Err(_) => println!("{}", "logging disabled. No Config found"),
+    };
 
     let addr: SocketAddr = "[::1]:50051".parse()?;
     let conn_str = dotenv::var("DATABASE_URL").expect("No Connection String in Env");

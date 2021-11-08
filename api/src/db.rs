@@ -2,8 +2,7 @@ use anyhow::Error;
 use model::model::db::MatchHistory;
 #[allow(unused)]
 use model::model::request::{MatchType, Region, TeamSize, Versus};
-use sqlx::{Executor, PgPool};
-use time::PrimitiveDateTime;
+use sqlx::{ PgPool};
 pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<MatchHistory>, Error> {
     let match_history = sqlx::query_as!(
         MatchHistory,
