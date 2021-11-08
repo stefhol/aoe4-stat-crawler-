@@ -19,11 +19,11 @@ use tonic::transport::Server;
 async fn main() -> Result<(), Error> {
     match log4rs::init_file("config/log4rs.yml", Default::default()) {
         Ok(_) => {}
-        Err(_) => println!("{}", "logging disabled. No Config found"),
+        Err(_) => println!("logging disabled. No Config found"),
     };
     let port = dotenv::var("PORT").expect("no PORT in env");
     let addr: SocketAddr = format!("[::1]:{}", port).parse()?;
-    let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in Env");
+    let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
 
     let pool = PgPoolOptions::new()
         .connect_with(
