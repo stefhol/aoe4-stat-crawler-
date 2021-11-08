@@ -18,8 +18,8 @@ use tonic::transport::Server;
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
     match log4rs::init_file("config/log4rs.yml", Default::default()) {
-        Ok(_) => {}
-        Err(_) => println!("logging disabled. No Config found"),
+        Ok(_) => (),
+        Err(_) => (),
     };
     let port = dotenv::var("PORT").expect("no PORT in env");
     let addr: SocketAddr = format!("[::1]:{}", port).parse()?;
