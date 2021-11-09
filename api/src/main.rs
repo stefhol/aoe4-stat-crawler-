@@ -7,9 +7,8 @@ use sqlx::{
 use std::{net::SocketAddr, str::FromStr, time::Duration};
 mod services;
 use tonic;
-pub mod player {
-    tonic::include_proto!("player");
-}
+mod proto_build;
+use proto_build::player;
 mod db;
 use log::info;
 
