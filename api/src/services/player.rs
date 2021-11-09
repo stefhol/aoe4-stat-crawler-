@@ -1,6 +1,6 @@
 use crate::db;
-use crate::player::player_page_server::PlayerPage;
-use crate::player::{MatchHistoryEntry, MatchHistoryReply, RlUserId};
+use crate::proto_build::player::player_page_server::PlayerPage;
+use crate::proto_build::player::{MatchHistoryEntry, MatchHistoryReply, RlUserId};
 use itertools::Itertools;
 
 use model::model::db::MatchHistory;
