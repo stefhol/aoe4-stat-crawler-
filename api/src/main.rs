@@ -17,7 +17,7 @@ use tonic::transport::Server;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
-    match log4rs::init_file("config/log4rs.yml", Default::default()) {
+    match log4rs::init_file("./config/log4rs.yml", Default::default()) {
         Ok(_) => (),
         Err(_) => (),
     };
