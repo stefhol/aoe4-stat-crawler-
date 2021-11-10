@@ -58,7 +58,9 @@ jobs:
     - name: show files
       run: ls -R
     - name: build docker
-      run: docker build ./api --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+      run: | 
+        cd ./api
+        docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
     - name: Log in to registry
         # This is where you will update the PAT to GITHUB_TOKEN
