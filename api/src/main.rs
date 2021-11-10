@@ -26,7 +26,7 @@ async fn main() -> Result<(), Error> {
     };
 
     let port = dotenv::var("PORT").expect("no PORT in env");
-    let addr: SocketAddr = format!("[::1]:{}", port).parse()?;
+    let addr: SocketAddr = format!("127.0.0.1:{}", port).parse()?;
     let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
 
     let pool = PgPoolOptions::new()
