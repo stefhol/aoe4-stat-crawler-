@@ -4,7 +4,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
 };
-use std::{env, net::SocketAddr, str::FromStr, time::Duration};
+use std::{ net::{IpAddr, Ipv4Addr, SocketAddr}, str::FromStr, time::Duration};
 mod services;
 use tonic;
 mod proto_build;
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Error> {
         Ok(_) => (),
         Err(_) => (),
     };
-    
+
     let port = dotenv::var("PORT").expect("no PORT in env");
     let addr: SocketAddr = format!("[::1]:{}", port).parse()?;
     let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
@@ -34,11 +34,11 @@ async fn main() -> Result<(), Error> {
                 .log_slow_statements(log::LevelFilter::Trace, Duration::from_secs(1))
                 .to_owned(),
         )
-        .await?;
+        .await.expect("can not connect to db");
 
     info!(
         "Starting server at localip http://{}:{} ",
-        local_ip_address::local_ip().unwrap().to_string(),
+        local_ip_address::local_ip().unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)).to_string(),
         addr.port()
     );
     Server::builder()
