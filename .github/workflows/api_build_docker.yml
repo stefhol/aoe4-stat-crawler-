@@ -1,4 +1,4 @@
-name: Build API
+name: Build API Docker
 
 on:
   workflow_dispatch:
@@ -9,41 +9,9 @@ env:
   IMAGE_NAME: age_info_api
 
 jobs:
-  build:
-    
-    runs-on: ubuntu-latest
-
-    name: build release
-    env:
-      SQLX_OFFLINE: true
-    
-    defaults:
-      run:
-        working-directory: ./api
-    container:
-      image: clux/muslrust
-    
-    steps:
-    - uses: actions/checkout@v2
-    - name: Link to predefined musl toolchain
-      run: |
-          ln -s /root/.cargo $HOME/.cargo
-          ln -s /root/.rustup $HOME/.rustup
-    
-    - name: Build
-      run: cargo build --release
-    - uses: actions/upload-artifact@v2
-      with:
-        name: api_x86_musl
-        path: |
-          ./api/target/x86_64-unknown-linux-musl/release/api
-          ./api/config
-          ./api/proto
-          ./api/Dockerfile
-          - name: Build image
+  
     
   build_docker:
-    needs: build
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -58,9 +26,9 @@ jobs:
     - name: show files
       run: ls -R
     - name: build docker
-      run: | 
+      run: |
         cd ./api
-        docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+        docker build ./api --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
     - name: Log in to registry
         # This is where you will update the PAT to GITHUB_TOKEN
@@ -69,7 +37,6 @@ jobs:
     - name: Push image
       run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
-
           # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
           # Strip git ref prefix from version
