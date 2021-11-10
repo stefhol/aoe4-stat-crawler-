@@ -55,6 +55,8 @@ jobs:
       with:
         # Artifact name
         name: api_x86_musl
+    - name: show files
+      run: ls -R
     - name: build docker
       run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
