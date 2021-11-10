@@ -6,4 +6,6 @@ COPY proto /usr/local/app/proto
 WORKDIR /usr/local/app/
 ENV PORT=5341
 
-CMD ["/usr/local/app/api"]
+
+RUN ["chmod", "+x", "./api"]
+CMD ["./api"]
