@@ -48,7 +48,7 @@ jobs:
     permissions:
       packages: write
       contents: read
-    name: build release
+    name: build docker image
     env:
       SQLX_OFFLINE: true
     defaults:
