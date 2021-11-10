@@ -43,7 +43,18 @@ jobs:
           ./api/proto
           - name: Build image
     
-      
+  build_docker:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    name: build docker image
+    env:
+      SQLX_OFFLINE: true
+    defaults:
+      run:
+        working-directory: ./api
+    steps:
     - name: build docker
       run: docker build ./api --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
