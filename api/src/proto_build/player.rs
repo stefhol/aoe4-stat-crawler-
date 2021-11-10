@@ -1,4 +1,50 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetCachedDatesRequest {
+    #[prost(string, tag = "1")]
+    pub match_type: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub versus: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub team_size: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CachedRankPageRequest {
+    #[prost(int64, repeated, tag = "1")]
+    pub player_ids: ::prost::alloc::vec::Vec<i64>,
+    #[prost(string, tag = "2")]
+    pub match_type: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub versus: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub team_size: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "5")]
+    pub time: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CachedRankPageReply {
+    #[prost(message, repeated, tag = "1")]
+    pub last_leaderboard: ::prost::alloc::vec::Vec<cached_rank_page_reply::CachedRankPageContent>,
+}
+/// Nested message and enum types in `CachedRankPageReply`.
+pub mod cached_rank_page_reply {
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct CachedRankPageContent {
+        #[prost(int64, tag = "1")]
+        pub rl_user_id: i64,
+        #[prost(int32, tag = "2")]
+        pub rank: i32,
+        #[prost(int32, tag = "3")]
+        pub elo: i32,
+        #[prost(int32, tag = "4")]
+        pub elo_rating: i32,
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DateReply {
+    #[prost(string, repeated, tag = "1")]
+    pub dates: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RlUserId {
     #[prost(int64, tag = "1")]
     pub rl_user_id: i64,
@@ -48,6 +94,14 @@ pub mod player_page_server {
             &self,
             request: tonic::Request<super::RlUserId>,
         ) -> Result<tonic::Response<super::MatchHistoryReply>, tonic::Status>;
+        async fn get_cached_dates(
+            &self,
+            request: tonic::Request<super::GetCachedDatesRequest>,
+        ) -> Result<tonic::Response<super::DateReply>, tonic::Status>;
+        async fn get_cached_rank_page(
+            &self,
+            request: tonic::Request<super::CachedRankPageRequest>,
+        ) -> Result<tonic::Response<super::CachedRankPageReply>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct PlayerPageServer<T: PlayerPage> {
@@ -110,6 +164,72 @@ pub mod player_page_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = GetPlayerHistoryMatchesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/player.PlayerPage/GetCachedDates" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCachedDatesSvc<T: PlayerPage>(pub Arc<T>);
+                    impl<T: PlayerPage> tonic::server::UnaryService<super::GetCachedDatesRequest>
+                        for GetCachedDatesSvc<T>
+                    {
+                        type Response = super::DateReply;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCachedDatesRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { (*inner).get_cached_dates(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetCachedDatesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/player.PlayerPage/GetCachedRankPage" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCachedRankPageSvc<T: PlayerPage>(pub Arc<T>);
+                    impl<T: PlayerPage> tonic::server::UnaryService<super::CachedRankPageRequest>
+                        for GetCachedRankPageSvc<T>
+                    {
+                        type Response = super::CachedRankPageReply;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::CachedRankPageRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { (*inner).get_cached_rank_page(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetCachedRankPageSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
                             accept_compression_encodings,

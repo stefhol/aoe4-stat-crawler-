@@ -1,10 +1,19 @@
 use crate::db;
 use crate::proto_build::player::player_page_server::PlayerPage;
-use crate::proto_build::player::{MatchHistoryEntry, MatchHistoryReply, RlUserId};
+use crate::proto_build::player::{
+    CachedRankPageReply, CachedRankPageRequest, DateReply, GetCachedDatesRequest,
+    MatchHistoryEntry, MatchHistoryReply, RlUserId,
+};
+use anyhow::Error;
 use itertools::Itertools;
 
+use crate::db::RankPageAtTime;
+use crate::proto_build::player::cached_rank_page_reply::CachedRankPageContent;
 use model::model::db::MatchHistory;
+use model::model::request::{MatchType, TeamSize, Versus};
 use serde_json;
+use serde_json::json;
+use sqlx::types::time::Date;
 use sqlx::PgPool;
 use tonic::{async_trait, Request, Response, Status};
 #[derive(Clone, Debug)]
@@ -70,5 +79,110 @@ impl PlayerPage for Player {
         } else {
             Err(Status::invalid_argument("Id not found"))
         }
+    }
+
+    async fn get_cached_dates(
+        &self,
+        request: Request<GetCachedDatesRequest>,
+    ) -> Result<Response<DateReply>, Status> {
+        //convert
+        let request = request.into_inner();
+        let converted_values =
+            MVTConverter::convert(&request.match_type, &request.versus, &request.team_size);
+        match converted_values {
+            Ok(converted_values) => {
+                let dates = db::get_available_cached_dates(
+                    &self.pool,
+                    converted_values.match_type,
+                    converted_values.team_size,
+                    converted_values.versus,
+                )
+                .await;
+                if let Ok(dates) = dates {
+                    Ok(Response::new(DateReply {
+                        dates: dates.iter().map(|date| date.format("%F")).collect_vec(),
+                    }))
+                } else {
+                    Err(Status::unknown("Error Code: 452131"))
+                }
+            }
+            Err(err) => return Err(Status::invalid_argument(err.to_string())),
+        }
+    }
+
+    async fn get_cached_rank_page(
+        &self,
+        request: Request<CachedRankPageRequest>,
+    ) -> Result<Response<CachedRankPageReply>, Status> {
+        fn helper_last_leaderboard(
+            last_leaderboard: Result<Vec<RankPageAtTime>, Error>,
+        ) -> Result<Response<CachedRankPageReply>, Status> {
+            match last_leaderboard {
+                Ok(last_leaderboard) => Ok(Response::new(CachedRankPageReply {
+                    last_leaderboard: last_leaderboard
+                        .iter()
+                        .map(|leaderboard_entry| CachedRankPageContent {
+                            rank: leaderboard_entry.rank,
+                            rl_user_id: leaderboard_entry.rl_user_id,
+                            elo_rating: leaderboard_entry.elo_rating,
+                            elo: leaderboard_entry.elo,
+                        })
+                        .collect_vec(),
+                })),
+                Err(err) => Err(Status::invalid_argument(err.to_string())),
+            }
+        }
+        let request: CachedRankPageRequest = request.into_inner();
+        match MVTConverter::convert(&request.match_type, &request.versus, &request.team_size) {
+            Ok(converted_values) => {
+                if let Some(time) = request.time {
+                    match Date::parse(time, "%F") {
+                        Ok(time) => {
+                            let last_leaderboard = db::get_rank_page_at_time(
+                                &self.pool,
+                                request.player_ids,
+                                time,
+                                converted_values.match_type,
+                                converted_values.team_size,
+                                converted_values.versus,
+                            )
+                            .await;
+                            helper_last_leaderboard(last_leaderboard)
+                        }
+                        Err(err) => Err(Status::invalid_argument(err.to_string())),
+                    }
+                } else {
+                    let last_leaderboard = db::get_latest_rank_page(
+                        &self.pool,
+                        request.player_ids,
+                        converted_values.match_type,
+                        converted_values.team_size,
+                        converted_values.versus,
+                    )
+                    .await;
+                    helper_last_leaderboard(last_leaderboard)
+                }
+            }
+            Err(err) => Err(Status::invalid_argument(err.to_string())),
+        }
+    }
+}
+
+struct MVTConverter {
+    pub match_type: MatchType,
+    pub versus: Versus,
+    pub team_size: TeamSize,
+}
+impl MVTConverter {
+    fn convert(match_type: &str, versus: &str, team_size: &str) -> Result<Self, Error> {
+        //convert
+        let match_type: MatchType = serde_json::from_value(json!(match_type))?;
+        let versus: Versus = serde_json::from_value(json!(versus))?;
+        let team_size: TeamSize = serde_json::from_value(json!(team_size))?;
+        Ok(Self {
+            match_type,
+            versus,
+            team_size,
+        })
     }
 }

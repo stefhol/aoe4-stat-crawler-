@@ -4,7 +4,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
 };
-use std::{net::SocketAddr, str::FromStr, time::Duration};
+use std::{env, net::SocketAddr, str::FromStr, time::Duration};
 mod services;
 use tonic;
 mod proto_build;
@@ -20,6 +20,7 @@ async fn main() -> Result<(), Error> {
         Ok(_) => (),
         Err(_) => (),
     };
+    
     let port = dotenv::var("PORT").expect("no PORT in env");
     let addr: SocketAddr = format!("[::1]:{}", port).parse()?;
     let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");

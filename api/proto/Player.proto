@@ -2,9 +2,34 @@ syntax = "proto3";
 package player;
 service PlayerPage {
     rpc GetPlayerHistoryMatches (RlUserId) returns (MatchHistoryReply);
-    
+    rpc GetCachedDates (GetCachedDatesRequest) returns (DateReply);
+    rpc GetCachedRankPage (CachedRankPageRequest) returns (CachedRankPageReply);
+}
+message GetCachedDatesRequest{
+    string match_type = 1;
+    string versus = 2;
+    string team_size = 3;
+}
+message CachedRankPageRequest{
+    repeated int64 player_ids = 1;
+    string match_type = 2;
+    string versus = 3;
+    string team_size = 4;
+    optional string time = 5;
+}
+message CachedRankPageReply{
+    message CachedRankPageContent{
+        int64 rl_user_id = 1;
+        int32 rank = 2;
+        int32 elo = 3;
+        int32 elo_rating = 4;
+    }
+    repeated CachedRankPageContent last_leaderboard = 1;
 }
 
+message DateReply{
+    repeated string dates = 1; 
+}
 message RlUserId {
     int64 rlUserId = 1;
     string time = 2;
