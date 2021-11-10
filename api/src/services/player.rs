@@ -133,6 +133,9 @@ impl PlayerPage for Player {
             }
         }
         let request: CachedRankPageRequest = request.into_inner();
+        if request.player_ids.len() > 100 {
+            return Err(Status::invalid_argument("Slow down a bit u cannot request more than 100 entries. You think you should? Contact the server admin"));
+        }
         match MVTConverter::convert(&request.match_type, &request.versus, &request.team_size) {
             Ok(converted_values) => {
                 if let Some(time) = request.time {
