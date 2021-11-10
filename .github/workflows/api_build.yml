@@ -43,6 +43,7 @@ jobs:
           - name: Build image
     
   build_docker:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       packages: write
