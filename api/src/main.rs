@@ -4,7 +4,11 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
 };
-use std::{ net::{IpAddr, Ipv4Addr, SocketAddr}, str::FromStr, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    str::FromStr,
+    time::Duration,
+};
 mod services;
 use tonic;
 mod proto_build;
@@ -14,7 +18,7 @@ use log::info;
 
 use tonic::transport::Server;
 
-#[actix_rt::main]
+#[tokio::main]
 async fn main() -> Result<(), Error> {
     match log4rs::init_file("./config/log4rs.yml", Default::default()) {
         Ok(_) => (),
@@ -34,11 +38,14 @@ async fn main() -> Result<(), Error> {
                 .log_slow_statements(log::LevelFilter::Trace, Duration::from_secs(1))
                 .to_owned(),
         )
-        .await.expect("can not connect to db");
+        .await
+        .expect("can not connect to db");
 
     info!(
         "Starting server at localip http://{}:{} ",
-        local_ip_address::local_ip().unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)).to_string(),
+        local_ip_address::local_ip()
+            .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
+            .to_string(),
         addr.port()
     );
     Server::builder()
