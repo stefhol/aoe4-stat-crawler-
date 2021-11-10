@@ -1,9 +1,9 @@
 FROM alpine:latest
 
-COPY target/x86_64-unknown-linux-musl/release/api /usr/local/app/server/
-COPY config /usr/local/app/server/
-COPY proto /usr/local/app/server/
-WORKDIR /usr/local/app/server
+COPY target/x86_64-unknown-linux-musl/release/api /usr/local/app/
+COPY config /usr/local/app/config
+COPY proto /usr/local/app/proto
+WORKDIR /usr/local/app/
 ENV PORT=5341
 
-CMD ["./api"]
+CMD ["/usr/local/app/api"]

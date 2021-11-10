@@ -53,6 +53,7 @@
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/tokio-4c940d0b40a98454/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/typenum-b771543d1b36e370/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/whoami-ff460b5a5132b6f9/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/tokio-68669df8889ef8a0/out" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
