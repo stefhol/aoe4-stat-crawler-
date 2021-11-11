@@ -49,6 +49,7 @@ async fn main() -> Result<(), Error> {
         addr.port()
     );
     Server::builder()
+        .accept_http1(true)
         .add_service(player::player_page_server::PlayerPageServer::new(
             services::player::Player::new(pool),
         ))
