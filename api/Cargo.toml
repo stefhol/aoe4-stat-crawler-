@@ -9,6 +9,7 @@ edition = "2021"
 model = {path="../model"}
 dotenv = "0.15.0"
 tonic = "0.6"
+tonic-web = "0.2"
 prost = "0.9"
 anyhow = "1.0"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }

@@ -50,8 +50,8 @@ async fn main() -> Result<(), Error> {
     );
     Server::builder()
         .accept_http1(true)
-        .add_service(player::player_page_server::PlayerPageServer::new(
-            services::player::Player::new(pool),
+        .add_service(tonic_web::config().allow_all_origins().enable(
+            player::player_page_server::PlayerPageServer::new(services::player::Player::new(pool)),
         ))
         .serve(addr)
         .await?;
