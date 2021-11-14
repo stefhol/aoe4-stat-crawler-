@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+    age_info_api:
+        image: ghcr.io/stefhol/age_info_api:main
+        environment:
+            DATABASE_URL: "postgres://actix:actix@db:5432/actix"
+            PORT: 80
+        
+        
+networks:
+  default:
+    external:
+      name: main
