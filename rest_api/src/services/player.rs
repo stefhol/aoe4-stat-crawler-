@@ -1,7 +1,5 @@
-use std::fmt::{Display, Formatter};
-use actix_web::{error, HttpResponse, post, ResponseError, web};
-use actix_web::error::JsonPayloadError;
-use anyhow::{anyhow, Error};
+use actix_web::{ HttpResponse, post, ResponseError, web};
+use anyhow::{ Error};
 use itertools::Itertools;
 use model::model::request::{MatchType, TeamSize, Versus};
 use serde::{Serialize, Deserialize};
@@ -12,15 +10,14 @@ use crate::db::RankPageAtTime;
 use derive_more::{Display, Error};
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
-use model::model::db::{MatchHistory, MatchHistorySerializable};
-use uuid::Uuid;
+use model::model::db::{ MatchHistorySerializable};
 
 #[derive(Debug, Display, Error)]
-#[display(fmt = "Error {}: {}",name, message)]
+#[display(fmt = "Error {}: {}", name, message)]
 struct MyError {
-    name:&'static str,
+    name: &'static str,
     message: &'static str,
-    status_code:StatusCode
+    status_code: StatusCode,
 }
 
 // Use default implementation for `error_response()` method
@@ -31,39 +28,49 @@ impl ResponseError for MyError {
 
     // error on this function implementation
     fn error_response(&self) -> HttpResponse {
-
         HttpResponse::build(self.status_code).body(self.to_string())
     }
 }
-#[derive(Clone,Serialize,Deserialize)]
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RlUserId {
     pub rl_user_id: i64,
     pub time: Option<String>,
 }
-#[derive(Clone, Serialize,Deserialize)]
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MatchHistoryReply {
     pub count: i32,
-    pub matches: Vec<MatchHistorySerializable>
+    pub matches: Vec<MatchHistorySerializable>,
+    avatar_url:Option<String>,
+    region:String,
+    username:String
 }
 
 #[post("/get-player-history")]
 async fn get_player_history_matches(
     request: web::Json<RlUserId>,
-    pool:Data<PgPool>
-) -> actix_web::Result<HttpResponse>{
+    pool: Data<PgPool>,
+) -> actix_web::Result<HttpResponse> {
+    let request = request.into_inner();
     // let time = time::Time::;
     let match_history =
-        db::get_match_history(pool.as_ref(), request.into_inner().rl_user_id).await;
-    if let Ok(match_history) = match_history {
-
-        Ok(HttpResponse::Ok().json(MatchHistoryReply {
-            count: match_history.len() as i32,
-            matches: match_history.iter().map(|entry|entry.into()).collect_vec(),
-        }))
-    } else {
-        Err(MyError{status_code:StatusCode::BAD_REQUEST,name:"Database",message:"Id is not found in database"}.into())
+        db::get_match_history(pool.as_ref(),request.rl_user_id.clone()).await;
+    let player = db::get_player(pool.as_ref(), request.rl_user_id.clone()).await;
+    if let Ok(player) = player {
+        if let Ok(match_history) = match_history {
+            return Ok(HttpResponse::Ok().json(MatchHistoryReply {
+                count: match_history.len() as i32,
+                avatar_url:player.avatar_url,
+                region:player.region,
+                username:player.username,
+                matches: match_history.iter().map(|entry| entry.into()).collect_vec(),
+            }));
+        }
     }
+    Err(MyError { status_code: StatusCode::BAD_REQUEST, name: "Database", message: "Id is not found in database" }.into())
 }
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct GetCachedDatesRequest {
     match_type: MatchType,
@@ -149,7 +156,7 @@ async fn get_cached_rank_page(
     }
     let request: CachedRankPageRequest = request.into_inner();
     if request.player_ids.len() > 100 {
-        return Err(MyError{status_code:StatusCode::FORBIDDEN,name:"too many player_ids", message:"Slow down a bit u cannot request more than 100 entries. You think you should? Contact the server admin"}.into());
+        return Err(MyError { status_code: StatusCode::FORBIDDEN, name: "too many player_ids", message: "Slow down a bit u cannot request more than 100 entries. You think you should? Contact the server admin" }.into());
     }
     if let Some(time) = request.time {
         match Date::parse(&time, "%F") {
