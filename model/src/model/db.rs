@@ -1,9 +1,7 @@
 use sqlx::types::time::{PrimitiveDateTime};
 use uuid::Uuid;
-use anyhow;
 use super::request::{MatchType, TeamSize, Versus};
 use serde::{Serialize, Deserialize};
-use time::Date;
 
 #[derive(sqlx::FromRow, Clone, Debug, Serialize, Deserialize)]
 pub struct Player {
