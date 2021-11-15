@@ -1,16 +1,21 @@
-use std::net::{SocketAddr,Ipv4Addr,IpAddr};
+use actix_cors::Cors;
+use actix_web::web::Data;
+use actix_web::{http, middleware, App, HttpServer};
+use log::info;
+use openssl::ssl::{SslAcceptor, SslAcceptorBuilder, SslFiletype, SslMethod};
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use sqlx::ConnectOptions;
+use std::fs::read_dir;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
-use actix_cors::Cors;
-use actix_web::{ App, HttpServer,middleware, http};
-use actix_web::web::Data;
-use log::info;
-use sqlx::ConnectOptions;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-mod services;
 mod db;
+mod services;
 
-use crate::services::player::{get_cached_rank_page, get_chached_dates, get_player_history_matches};
+use crate::services::player::{
+    get_cached_rank_page, get_chached_dates, get_player_history_matches,
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -18,9 +23,42 @@ async fn main() -> std::io::Result<()> {
         Ok(_) => (),
         Err(_) => (),
     };
-
+    let mut builder: Option<SslAcceptorBuilder> = None;
+    match dotenv::var("SSL") {
+        Ok(val) => {
+            if val.to_lowercase() == "true" {
+                let mut local_builder = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
+                for path in read_dir(val.clone())
+                    .expect(&format!("Cannot read cert dir -> {}", val.clone()))
+                    .map(|dir| {
+                        dir.expect(&format!("cannot read possible cert in {}", val.clone()))
+                            .path()
+                    })
+                {
+                    let path = Path::new(&path);
+                    if path.ends_with("key.pem") {
+                        local_builder
+                            .set_private_key_file(path, SslFiletype::PEM)
+                            .unwrap();
+                    } else if path.ends_with("cert.pem") {
+                        local_builder.set_certificate_chain_file(path).unwrap();
+                    }
+                }
+                builder = Some(local_builder);
+            }
+        }
+        Err(_) => {}
+    };
     let port = dotenv::var("PORT").expect("no PORT in env");
-    let addr: SocketAddr = format!("127.0.0.1:{}", port).parse().expect("Port is in wrong format");
+    let address = dotenv::var("ADDRESS");
+    let addr: SocketAddr = match address {
+        Ok(val) => format!("{}:{}", val.clone(), port.clone())
+            .parse()
+            .expect(&format!("cant parse socketAddress, {}:{}",val.clone(),port.clone())),
+        Err(_) => format!("127.0.0.1:{}", port)
+            .parse()
+            .expect("Port is in wrong format"),
+    };
     let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
 
     let pool = PgPoolOptions::new()
@@ -42,31 +80,64 @@ async fn main() -> std::io::Result<()> {
             .to_string(),
         addr.port()
     );
-    HttpServer::new(move || {
-        let cors = Cors::default()
-            .allowed_origin("http://127.0.0.1:3000")
-            .allowed_origin("http://localhost:3000")
-            .allowed_origin("https://age4.info")
-            .allowed_origin("http://age4.info")
-            .allowed_origin("https://www.age4.info")
-            .allowed_origin("http://www.age4.info")
-            .allowed_methods(vec!["POST"])
-            .allowed_header(http::header::CONTENT_TYPE)
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            .allowed_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
-            .allowed_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
-            .allowed_header(http::header::ACCEPT)
-            .max_age(3600);
-        App::new()
-            .app_data(Data::new(pool.clone()))
-            .wrap(middleware::Compress::default())
-            .wrap(cors)
-            .wrap(middleware::Logger::default())
-            .service(get_chached_dates)
-            .service(get_cached_rank_page)
-            .service(get_player_history_matches)
-    })
-    .bind(addr)?.workers(1)
-    .run()
-    .await
+    info!("Binding to {}",&addr.to_string());
+
+    match builder {
+        Some(builder) => {
+            HttpServer::new(move || {
+                let cors = Cors::default()
+                    .allowed_origin("http://127.0.0.1:3000")
+                    .allowed_origin("http://localhost:3000")
+                    .allowed_origin("https://age4.info")
+                    .allowed_origin("http://age4.info")
+                    .allowed_origin("https://www.age4.info")
+                    .allowed_origin("http://www.age4.info")
+                    .allowed_methods(vec!["POST"])
+                    .allowed_header(http::header::CONTENT_TYPE)
+                    .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                    .allowed_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+                    .allowed_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .allowed_header(http::header::ACCEPT)
+                    .max_age(3600);
+                App::new()
+                    .app_data(Data::new(pool.clone()))
+                    .wrap(middleware::Compress::default())
+                    .wrap(cors)
+                    .wrap(middleware::Logger::default())
+                    .service(get_chached_dates)
+                    .service(get_cached_rank_page)
+                    .service(get_player_history_matches)
+            })
+            .bind_openssl(addr, builder)?
+            .workers(1)
+            .run()
+            .await
+        }
+        None => {
+            HttpServer::new(move || {
+                let cors = Cors::default()
+                    .allowed_origin("http://127.0.0.1:3000")
+                    .allowed_origin("http://localhost:3000")
+                    .allowed_methods(vec!["POST"])
+                    .allowed_header(http::header::CONTENT_TYPE)
+                    .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                    .allowed_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+                    .allowed_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .allowed_header(http::header::ACCEPT)
+                    .max_age(3600);
+                App::new()
+                    .app_data(Data::new(pool.clone()))
+                    .wrap(middleware::Compress::default())
+                    .wrap(cors)
+                    .wrap(middleware::Logger::default())
+                    .service(get_chached_dates)
+                    .service(get_cached_rank_page)
+                    .service(get_player_history_matches)
+            })
+            .bind(addr)?
+            .workers(1)
+            .run()
+            .await
+        }
+    }
 }
