@@ -10,6 +10,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
+
 mod db;
 mod services;
 
@@ -42,6 +43,8 @@ async fn main() -> std::io::Result<()> {
                             .unwrap();
                     } else if path.ends_with("cert.pem") {
                         local_builder.set_certificate_chain_file(path).unwrap();
+                    } else {
+                        info!("found in folder {}",path.to_str().unwrap());
                     }
                 }
                 builder = Some(local_builder);
@@ -54,7 +57,7 @@ async fn main() -> std::io::Result<()> {
     let addr: SocketAddr = match address {
         Ok(val) => format!("{}:{}", val.clone(), port.clone())
             .parse()
-            .expect(&format!("cant parse socketAddress, {}:{}",val.clone(),port.clone())),
+            .expect(&format!("cant parse socketAddress, {}:{}", val.clone(), port.clone())),
         Err(_) => format!("127.0.0.1:{}", port)
             .parse()
             .expect("Port is in wrong format"),
@@ -85,6 +88,7 @@ async fn main() -> std::io::Result<()> {
     match builder {
         Some(builder) => {
             HttpServer::new(move || {
+                info!("running in ssl mode");
                 let cors = Cors::default()
                     .allowed_origin("http://127.0.0.1:3000")
                     .allowed_origin("http://localhost:3000")
@@ -108,36 +112,36 @@ async fn main() -> std::io::Result<()> {
                     .service(get_cached_rank_page)
                     .service(get_player_history_matches)
             })
-            .bind_openssl(addr, builder)?
-            .workers(1)
-            .run()
-            .await
+                .bind_openssl(addr, builder)?
+                .workers(1)
+                .run()
+                .await
         }
         None => {
-            HttpServer::new(move || {
-                let cors = Cors::default()
-                    .allowed_origin("http://127.0.0.1:3000")
-                    .allowed_origin("http://localhost:3000")
-                    .allowed_methods(vec!["POST"])
-                    .allowed_header(http::header::CONTENT_TYPE)
-                    .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                    .allowed_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
-                    .allowed_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                    .allowed_header(http::header::ACCEPT)
-                    .max_age(3600);
-                App::new()
-                    .app_data(Data::new(pool.clone()))
-                    .wrap(middleware::Compress::default())
-                    .wrap(cors)
-                    .wrap(middleware::Logger::default())
-                    .service(get_chached_dates)
-                    .service(get_cached_rank_page)
-                    .service(get_player_history_matches)
-            })
-            .bind(addr)?
-            .workers(1)
-            .run()
-            .await
+            HttpServer::new(move ||
+                {
+                    info!("running in non ssl mode");
+                    let cors = Cors::permissive()
+                        .allowed_methods(vec!["POST"])
+                        .allowed_header(http::header::CONTENT_TYPE)
+                        .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                        .allowed_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+                        .allowed_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                        .allowed_header(http::header::ACCEPT)
+                        .max_age(3600);
+                    App::new()
+                        .app_data(Data::new(pool.clone()))
+                        .wrap(middleware::Compress::default())
+                        .wrap(cors)
+                        .wrap(middleware::Logger::default())
+                        .service(get_chached_dates)
+                        .service(get_cached_rank_page)
+                        .service(get_player_history_matches)
+                })
+                .bind(addr)?
+                .workers(1)
+                .run()
+                .await
         }
     }
 }
