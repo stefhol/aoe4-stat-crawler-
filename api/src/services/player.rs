@@ -64,21 +64,25 @@ impl PlayerPage for Player {
         &self,
         request: Request<RlUserId>,
     ) -> Result<Response<MatchHistoryReply>, Status> {
-        // let time = time::Time::;
-        let match_history =
-            db::get_match_history(&self.pool, request.into_inner().rl_user_id).await;
-        if let Ok(match_history) = match_history {
-            let match_history: Vec<MatchHistoryEntry> = match_history
-                .iter()
-                .map(|my_match| my_match.from_match_history())
-                .collect_vec();
-            Ok(Response::new(MatchHistoryReply {
-                count: match_history.len() as i32,
-                matches: match_history,
-            }))
-        } else {
-            Err(Status::invalid_argument("Id not found"))
+        let request = request.into_inner();
+        let match_history = db::get_match_history(&self.pool, request.rl_user_id.clone()).await;
+        let player = db::get_player(&self.pool, request.rl_user_id.clone()).await;
+        if let Ok(player) = player {
+            if let Ok(match_history) = match_history {
+                let match_history: Vec<MatchHistoryEntry> = match_history
+                    .iter()
+                    .map(|my_match| my_match.from_match_history())
+                    .collect_vec();
+                return Ok(Response::new(MatchHistoryReply {
+                    count: match_history.len() as i32,
+                    avatar_url: player.avatar_url,
+                    region: player.region,
+                    username: player.username,
+                    matches: match_history,
+                }));
+            }
         }
+        Err(Status::invalid_argument("Id not found"))
     }
 
     async fn get_cached_dates(

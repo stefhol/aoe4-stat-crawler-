@@ -37,6 +37,9 @@ message RlUserId {
 message MatchHistoryReply {
     int32 count = 1;
     repeated MatchHistoryEntry matches = 2;
+    string region = 3;
+    string username = 4;
+    optional string avatar_url = 5;
 }
 message MatchHistoryEntry{
     string id = 1;

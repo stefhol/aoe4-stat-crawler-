@@ -265,6 +265,50 @@
       ]
     }
   },
+  "e6ed5b4c86f21c22933f55f645811968a80e4bb4a1a61070e37b69c884f5d8e1": {
+    "query": "select * from player where rl_user_id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "rl_user_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 2,
+          "name": "username",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "region",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 4,
+          "name": "avatar_url",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
   "fd85c699452df07c0c46ca2eae5f98f3852476d7c8beef8dfefd208418ce090d": {
     "query": "\n            SELECT DISTINCT date(time) FROM match_history\n            WHERE match_type = $1 \n            AND \n            team_size = $2\n            AND \n            versus = $3\n            AND \n            time is not NULL\n            LIMIT 365\n    ",
     "describe": {

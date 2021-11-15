@@ -1,12 +1,19 @@
 use anyhow::Error;
 use itertools::Itertools;
-use model::model::db::MatchHistory;
+use model::model::db::{MatchHistory, Player};
 #[allow(unused)]
 use model::model::request::{MatchType, Region, TeamSize, Versus};
-use sqlx::{
-    types::time::{Date},
-    PgPool,
-};
+use sqlx::{types::time::Date, PgPool};
+pub async fn get_player(pool: &PgPool, rl_user_id: i64) -> Result<Player, Error> {
+    let player = sqlx::query_as!(
+        Player,
+        "select * from player where rl_user_id = $1",
+        rl_user_id
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok(player)
+}
 ///get all matches from specific player
 pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<MatchHistory>, Error> {
     let match_history = sqlx::query_as!(

@@ -57,6 +57,12 @@ pub struct MatchHistoryReply {
     pub count: i32,
     #[prost(message, repeated, tag = "2")]
     pub matches: ::prost::alloc::vec::Vec<MatchHistoryEntry>,
+    #[prost(string, tag = "3")]
+    pub region: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub username: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "5")]
+    pub avatar_url: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MatchHistoryEntry {
