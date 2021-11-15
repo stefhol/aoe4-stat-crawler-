@@ -1,17 +1,48 @@
-name: Build API Docker
+
+name: Build REST API
 
 on:
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  STOP_BUILD_PROTO: true
-  IMAGE_NAME: age_info_api
+  IMAGE_NAME: age_info_rest_api
 
 jobs:
-  
+  build:
+    
+    runs-on: ubuntu-latest
+
+    name: build release
+    env:
+      SQLX_OFFLINE: true
+    
+    defaults:
+      run:
+        working-directory: ./rest_api
+    container:
+      image: clux/muslrust
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Link to predefined musl toolchain
+      run: |
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+    
+    - name: Build
+      run: cargo build --release
+    - uses: actions/upload-artifact@v2
+      with:
+        name: rest_api_x86_musl
+        path: |
+          ./rest_api/target/x86_64-unknown-linux-musl/release/rest_api
+          ./rest_api/config
+          ./rest_api/Dockerfile
+          - name: Build image
     
   build_docker:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -22,14 +53,13 @@ jobs:
       uses: actions/download-artifact@v2.0.10
       with:
         # Artifact name
-        name: api_x86_musl
+        name: rest_api_x86_musl
     - name: show files
       run: ls -R
     - name: build docker
-      run: |
-        cd ./api
-        docker build ./api --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-
+      run: | 
+        cd ./rest_api
+        docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
     - name: Log in to registry
         # This is where you will update the PAT to GITHUB_TOKEN
       run: echo "${{ secrets.UPLOAD_PACKAGE_SECRET }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
