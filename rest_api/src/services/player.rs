@@ -47,7 +47,7 @@ pub struct MatchHistoryReply {
     username:String
 }
 
-#[post("/get-player-history")]
+#[post("/api/get-player-history")]
 async fn get_player_history_matches(
     request: web::Json<RlUserId>,
     pool: Data<PgPool>,
@@ -83,7 +83,7 @@ struct GetCachedDatesReply {
     dates: Vec<String>,
 }
 
-#[post("/get-cached-dates")]
+#[post("/api/get-cached-dates")]
 async fn get_chached_dates(req_body: web::Json<GetCachedDatesRequest>, pool: web::Data<PgPool>) -> actix_web::Result<HttpResponse> {
 
     //convert
@@ -131,7 +131,7 @@ pub struct CachedRankPageContent {
     pub elo_rating: i32,
 }
 
-#[post("/get-cached-rank-page")]
+#[post("/api/get-cached-rank-page")]
 async fn get_cached_rank_page(
     request: web::Json<CachedRankPageRequest>,
     pool: web::Data<PgPool>,
