@@ -110,8 +110,8 @@
       "nullable": []
     }
   },
-  "cd7dc81bc3f5c8065607470d5c06ae3315e75b0081918e622113020e6e206cff": {
-    "query": "\n                    SELECT \n                    match_type as \"match_type:MatchType\",\n                    team_size as \"team_size:TeamSize\",\n                    versus as \"versus:Versus\",\n                    rank,\n                    elo,\n                    wins,\n                    losses,\n                    win_streak\n                     FROM match_history \n                    join player_match_history on match_history.id = match_history_id\n                    where player_id = $1\n                    ORDER BY time DESC\n                ",
+  "ccd9fdd72ef1b9068c923897567f0fcbe74af04571688b9ae1dc727f46af2510": {
+    "query": "\n                    SELECT \n                    match_type as \"match_type:MatchType\",\n                    team_size as \"team_size:TeamSize\",\n                    versus as \"versus:Versus\",\n                    rank,\n                    elo,\n                    wins,\n                    losses,\n                    win_streak\n                     FROM match_history \n                    join player_match_history on match_history.id = match_history_id\n                    where player_id = $1 \n                    AND match_type = $2\n                    AND versus = $3\n                    AND team_size = $4\n                    ORDER BY time DESC\n                ",
     "describe": {
       "columns": [
         {
@@ -191,7 +191,44 @@
       ],
       "parameters": {
         "Left": [
-          "Uuid"
+          "Uuid",
+          {
+            "Custom": {
+              "name": "match_type",
+              "kind": {
+                "Enum": [
+                  "unranked",
+                  "ranked",
+                  "custom"
+                ]
+              }
+            }
+          },
+          {
+            "Custom": {
+              "name": "versus",
+              "kind": {
+                "Enum": [
+                  "ai",
+                  "players"
+                ]
+              }
+            }
+          },
+          {
+            "Custom": {
+              "name": "team_size",
+              "kind": {
+                "Enum": [
+                  "1v1",
+                  "2v2",
+                  "3v3",
+                  "4v4",
+                  "custom"
+                ]
+              }
+            }
+          }
         ]
       },
       "nullable": [
