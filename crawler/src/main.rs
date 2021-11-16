@@ -229,11 +229,22 @@ async fn crawl_aoe4_singel_leaderboard(
         }
     };
 }
+/// Struct with non optional TeamSize. None gets mapped to custom in db
+struct TempRequest{
+    team_size:TeamSize,
+    versus:Versus,
+    match_type:MatchType
+}
 //////
 /// Adds Leaderboard page to the DB
 async fn add_leaderboard_page_to_db(pool: &PgPool, leaderboard: &Leaderboard) {
     info!("Saving Leaderboard Page to db");
     if let Some(request) = &leaderboard.request {
+        let request = TempRequest{
+            match_type:request.match_type.clone(),
+            team_size:request.team_size.as_ref().unwrap_or(&TeamSize::Custom).clone(),
+            versus:request.versus.clone()
+        };
         for leaderboard_entry in &leaderboard.items {
             //check if player exists
             let player_result = query!(
@@ -302,10 +313,16 @@ async fn add_leaderboard_page_to_db(pool: &PgPool, leaderboard: &Leaderboard) {
                     win_streak
                      FROM match_history 
                     join player_match_history on match_history.id = match_history_id
-                    where player_id = $1
+                    where player_id = $1 
+                    AND match_type = $2
+                    AND versus = $3
+                    AND team_size = $4
                     ORDER BY time DESC
                 "#,
-                    player_id
+                    player_id,
+                    request.match_type.clone() as MatchType,
+                    request.versus.clone() as Versus,
+                    request.team_size.clone() as TeamSize
                 )
                 .fetch_optional(pool)
                 .await;
@@ -318,12 +335,9 @@ async fn add_leaderboard_page_to_db(pool: &PgPool, leaderboard: &Leaderboard) {
                 let mut same_match = false;
                 if let Ok(possible_latest_match) = query_match_history {
                     if let Some(latest_match) = possible_latest_match {
-                        let request_team_size = match &request.team_size {
-                            Some(team_size) => team_size.to_owned(),
-                            None => TeamSize::Custom,
-                        };
+                        
                         if latest_match.match_type == request.match_type {
-                            if latest_match.team_size == request_team_size {
+                            if latest_match.team_size == request.team_size {
                                 if latest_match.versus == request.versus {
                                     if latest_match.rank == leaderboard_entry.rank {
                                         if latest_match.elo == leaderboard_entry.elo {
