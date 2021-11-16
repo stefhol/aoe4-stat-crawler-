@@ -4,7 +4,7 @@ use actix_web::{http, middleware, App, HttpServer};
 use log::info;
 use openssl::ssl::{SslAcceptor, SslAcceptorBuilder, SslFiletype, SslMethod};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::ConnectOptions;
+use sqlx::{ConnectOptions, PgPool};
 use std::fs::read_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::Path;
@@ -24,38 +24,41 @@ async fn main() -> std::io::Result<()> {
         Ok(_) => (),
         Err(_) => (),
     };
-    let builder: Option<SslAcceptorBuilder> =
-        match dotenv::var("SSL") {
-            Ok(val) => {
-                let mut local_builder = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
-                for path in read_dir(val.clone())
-                    .expect(&format!("Cannot read cert dir -> {}", val.clone()))
-                    .map(|dir| {
-                        dir.expect(&format!("cannot read possible cert in {}", val.clone()))
-                            .path()
-                    })
-                {
-                    let path = Path::new(&path);
-                    if path.ends_with("key.pem") {
-                        local_builder
-                            .set_private_key_file(path, SslFiletype::PEM)
-                            .unwrap();
-                    } else if path.ends_with("cert.pem") {
-                        local_builder.set_certificate_chain_file(path).unwrap();
-                    } else {
-                        info!("found in folder {}",path.to_str().unwrap());
-                    }
+    let builder: Option<SslAcceptorBuilder> = match dotenv::var("SSL") {
+        Ok(val) => {
+            let mut local_builder = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
+            for path in read_dir(val.clone())
+                .expect(&format!("Cannot read cert dir -> {}", val.clone()))
+                .map(|dir| {
+                    dir.expect(&format!("cannot read possible cert in {}", val.clone()))
+                        .path()
+                })
+            {
+                let path = Path::new(&path);
+                if path.ends_with("key.pem") {
+                    local_builder
+                        .set_private_key_file(path, SslFiletype::PEM)
+                        .unwrap();
+                } else if path.ends_with("cert.pem") {
+                    local_builder.set_certificate_chain_file(path).unwrap();
+                } else {
+                    info!("found in folder {}", path.to_str().unwrap());
                 }
-                Some(local_builder)
             }
-            Err(_) => None
-        };
+            Some(local_builder)
+        }
+        Err(_) => None,
+    };
     let port = dotenv::var("PORT").expect("no PORT in env");
     let address = dotenv::var("ADDRESS");
     let addr: SocketAddr = match address {
         Ok(val) => format!("{}:{}", val.clone(), port.clone())
             .parse()
-            .expect(&format!("cant parse socketAddress, {}:{}", val.clone(), port.clone())),
+            .expect(&format!(
+                "cant parse socketAddress, {}:{}",
+                val.clone(),
+                port.clone()
+            )),
         Err(_) => format!("0.0.0.0:{}", port)
             .parse()
             .expect("Port is in wrong format"),
@@ -81,8 +84,13 @@ async fn main() -> std::io::Result<()> {
             .to_string(),
         addr.port()
     );
-    info!("Binding to {}",&addr.to_string());
-
+    info!("Binding to {}", &addr.to_string());
+    fn service_config(cfg: &mut actix_web::web::ServiceConfig) {
+        cfg
+            .service(get_chached_dates)
+            .service(get_cached_rank_page)
+            .service(get_player_history_matches);
+    }
     match builder {
         Some(builder) => {
             HttpServer::new(move || {
@@ -108,40 +116,37 @@ async fn main() -> std::io::Result<()> {
                     .wrap(middleware::Compress::default())
                     .wrap(cors)
                     .wrap(middleware::Logger::default())
-                    .service(get_chached_dates)
-                    .service(get_cached_rank_page)
-                    .service(get_player_history_matches)
+                    .configure(service_config)
             })
-                .bind_openssl(addr, builder)?
-                .workers(1)
-                .run()
-                .await
+            .bind_openssl(addr, builder)?
+            .workers(1)
+            .run()
+            .await
         }
         None => {
-            HttpServer::new(move ||
-                {
-                    info!("running in non ssl mode");
-                    let cors = Cors::permissive()
-                        .allowed_methods(vec!["POST"])
-                        .allowed_header(http::header::CONTENT_TYPE)
-                        .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                        .allowed_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
-                        .allowed_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                        .allowed_header(http::header::ACCEPT)
-                        .max_age(3600);
-                    App::new()
-                        .app_data(Data::new(pool.clone()))
-                        .wrap(middleware::Compress::default())
-                        .wrap(cors)
-                        .wrap(middleware::Logger::default())
-                        .service(get_chached_dates)
-                        .service(get_cached_rank_page)
-                        .service(get_player_history_matches)
-                })
-                .bind(addr)?
-                .workers(1)
-                .run()
-                .await
+            HttpServer::new(move || {
+                info!("running in non ssl mode");
+                let cors = Cors::default()
+                    .allowed_origin("http://127.0.0.1:3000")
+                    .allowed_origin("http://localhost:3000")
+                    .allowed_origin("https://age4.info")
+                    .allowed_origin("http://age4.info")
+                    .allowed_origin("https://www.age4.info")
+                    .allowed_origin("http://www.age4.info")
+                    .allow_any_method()
+                    .allow_any_header()
+                    .max_age(3600);
+                App::new()
+                    .app_data(Data::new(pool.clone()))
+                    .wrap(middleware::Compress::default())
+                    .wrap(cors)
+                    .wrap(middleware::Logger::default())
+                    .configure(service_config)
+            })
+            .bind(addr)?
+            .workers(1)
+            .run()
+            .await
         }
     }
 }
