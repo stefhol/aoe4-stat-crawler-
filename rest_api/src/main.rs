@@ -56,7 +56,7 @@ async fn main() -> std::io::Result<()> {
         Ok(val) => format!("{}:{}", val.clone(), port.clone())
             .parse()
             .expect(&format!("cant parse socketAddress, {}:{}", val.clone(), port.clone())),
-        Err(_) => format!("127.0.0.1:{}", port)
+        Err(_) => format!("0.0.0.0:{}", port)
             .parse()
             .expect("Port is in wrong format"),
     };
