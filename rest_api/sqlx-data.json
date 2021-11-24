@@ -189,6 +189,32 @@
       ]
     }
   },
+  "cffa4f909b99dc2283d59eee878c8ca1adcea0d4d8cf0fbfbf8393cecccc3a45": {
+    "query": "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 100",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "rl_user_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "username",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "dbabe272bac4111bd193ef8a3e2cf67740771fb5e258eb71eb7f6212de0e3c4b": {
     "query": "\n            SELECT DISTINCT date(time) FROM match_history\n            WHERE match_type = $1\n            AND\n            team_size = $2\n            AND\n            versus = $3\n            AND\n            time is not NULL\n            LIMIT 365\n    ",
     "describe": {
