@@ -56,6 +56,13 @@
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/whoami-ff460b5a5132b6f9/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/zstd-safe-d711a5e4a5f8e2c2/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/zstd-sys-7285ff6139febe90/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/openssl-0f0fc6c56e585696/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/openssl-sys-1df2bd4aa83991ef/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/tokio-openssl-53b23e4de92fdef9/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/cookie-29976d54b2f52e0b/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/crossbeam-utils-0dd2e6dc870a4399/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/maybe-uninit-eaa73beb0f44ac72/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/memchr-9dd8ab0f3e7cb637/out" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

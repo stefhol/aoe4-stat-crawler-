@@ -4,7 +4,7 @@ use actix_web::{http, middleware, App, HttpServer};
 use log::info;
 use openssl::ssl::{SslAcceptor, SslAcceptorBuilder, SslFiletype, SslMethod};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::{ConnectOptions, PgPool};
+use sqlx::{ConnectOptions};
 use std::fs::read_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::Path;
@@ -13,9 +13,8 @@ use std::time::Duration;
 
 mod db;
 mod services;
-
 use crate::services::player::{
-    get_cached_rank_page, get_chached_dates, get_player_history_matches,
+    get_cached_rank_page, get_chached_dates, get_player_history_matches, search_player
 };
 
 #[actix_web::main]
@@ -63,11 +62,10 @@ async fn main() -> std::io::Result<()> {
             .parse()
             .expect("Port is in wrong format"),
     };
-    let conn_str = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
-
+    let conn_str_db = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
     let pool = PgPoolOptions::new()
         .connect_with(
-            PgConnectOptions::from_str(&conn_str)
+            PgConnectOptions::from_str(&conn_str_db)
                 .unwrap()
                 .application_name("Age4 REST API Service")
                 .log_statements(log::LevelFilter::Trace)
@@ -86,10 +84,10 @@ async fn main() -> std::io::Result<()> {
     );
     info!("Binding to {}", &addr.to_string());
     fn service_config(cfg: &mut actix_web::web::ServiceConfig) {
-        cfg
-            .service(get_chached_dates)
+        cfg.service(get_chached_dates)
             .service(get_cached_rank_page)
-            .service(get_player_history_matches);
+            .service(get_player_history_matches)
+            .service(search_player);
     }
     match builder {
         Some(builder) => {
@@ -150,3 +148,4 @@ async fn main() -> std::io::Result<()> {
         }
     }
 }
+

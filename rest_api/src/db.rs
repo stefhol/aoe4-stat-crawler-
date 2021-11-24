@@ -3,18 +3,41 @@ use itertools::Itertools;
 use model::model::db::{MatchHistory, Player};
 #[allow(unused)]
 use model::model::request::{MatchType, Region, TeamSize, Versus};
-use sqlx::{
-    types::time::{Date},
-    PgPool,
-};
-pub async fn get_player(pool:&PgPool,rl_user_id:i64) -> Result<Player,Error>{
+use serde::{Deserialize, Serialize};
+use sqlx::{types::time::Date, PgPool};
+pub async fn get_player(pool: &PgPool, rl_user_id: i64) -> Result<Player, Error> {
     let player = sqlx::query_as!(
         Player,
         "select * from player where rl_user_id = $1",
         rl_user_id
-    ).fetch_one(pool)
-        .await?;
+    )
+    .fetch_one(pool)
+    .await?;
     Ok(player)
+}
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SearchPlayer {
+    pub username: String,
+    pub rl_user_id: i64,
+}
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SearchPlayers {
+    pub players: Vec<SearchPlayer>,
+    pub count:u32
+}
+
+pub async fn search_player(
+    pool: &PgPool,
+    name: &str,
+) -> Result<SearchPlayers, Error> {
+    let players = sqlx::query_as!(
+        SearchPlayer,
+       "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 100",
+        format!("%{}%",name)
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(SearchPlayers { count:*&players.len() as u32 ,players})
 }
 ///get all matches from specific player
 pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<MatchHistory>, Error> {
@@ -42,8 +65,8 @@ pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<Mat
     "#,
         rl_user_id,
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(match_history)
 }
@@ -63,6 +86,7 @@ pub async fn get_rank_page_at_time(
     team_size: TeamSize,
     versus: Versus,
 ) -> Result<Vec<RankPageAtTime>, Error> {
+
     let match_history = sqlx::query!(
         r#"
         select
@@ -95,8 +119,8 @@ pub async fn get_rank_page_at_time(
         team_size as TeamSize,
         versus as Versus
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
     Ok(match_history
         .iter()
         .map(|record| RankPageAtTime {
@@ -115,6 +139,7 @@ pub async fn get_latest_rank_page(
     team_size: TeamSize,
     versus: Versus,
 ) -> Result<Vec<RankPageAtTime>, Error> {
+    
     let match_history = sqlx::query!(
         r#"
         select
@@ -146,8 +171,8 @@ pub async fn get_latest_rank_page(
         team_size as TeamSize,
         versus as Versus
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
     Ok(match_history
         .iter()
         .map(|record| RankPageAtTime {
@@ -181,7 +206,7 @@ pub async fn get_available_cached_dates(
         team_size as TeamSize,
         versus as Versus
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
     Ok(dates.iter().map(|date| date.date.unwrap()).collect_vec())
 }

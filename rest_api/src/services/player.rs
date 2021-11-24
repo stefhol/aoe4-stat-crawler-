@@ -1,16 +1,16 @@
-use actix_web::{ HttpResponse, post, ResponseError, web};
-use anyhow::{ Error};
-use itertools::Itertools;
-use model::model::request::{MatchType, TeamSize, Versus};
-use serde::{Serialize, Deserialize};
-use sqlx::PgPool;
-use sqlx::types::time::Date;
-use crate::db;
+use crate::db::{self};
 use crate::db::RankPageAtTime;
-use derive_more::{Display, Error};
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
-use model::model::db::{ MatchHistorySerializable};
+use actix_web::{get, post, web, HttpResponse, ResponseError};
+use anyhow::Error;
+use derive_more::{Display, Error};
+use itertools::Itertools;
+use model::model::db::MatchHistorySerializable;
+use model::model::request::{MatchType, TeamSize, Versus};
+use serde::{Deserialize, Serialize};
+use sqlx::types::time::Date;
+use sqlx::PgPool;
 
 #[derive(Debug, Display, Error)]
 #[display(fmt = "Error {}: {}", name, message)]
@@ -42,9 +42,9 @@ pub struct RlUserId {
 pub struct MatchHistoryReply {
     pub count: i32,
     pub matches: Vec<MatchHistorySerializable>,
-    avatar_url:Option<String>,
-    region:String,
-    username:String
+    avatar_url: Option<String>,
+    region: String,
+    username: String,
 }
 
 #[post("/api/get-player-history")]
@@ -54,21 +54,25 @@ async fn get_player_history_matches(
 ) -> actix_web::Result<HttpResponse> {
     let request = request.into_inner();
     // let time = time::Time::;
-    let match_history =
-        db::get_match_history(pool.as_ref(),request.rl_user_id.clone()).await;
+    let match_history = db::get_match_history(pool.as_ref(), request.rl_user_id.clone()).await;
     let player = db::get_player(pool.as_ref(), request.rl_user_id.clone()).await;
     if let Ok(player) = player {
         if let Ok(match_history) = match_history {
             return Ok(HttpResponse::Ok().json(MatchHistoryReply {
                 count: match_history.len() as i32,
-                avatar_url:player.avatar_url,
-                region:player.region,
-                username:player.username,
+                avatar_url: player.avatar_url,
+                region: player.region,
+                username: player.username,
                 matches: match_history.iter().map(|entry| entry.into()).collect_vec(),
             }));
         }
     }
-    Err(MyError { status_code: StatusCode::BAD_REQUEST, name: "Database", message: "Id is not found in database" }.into())
+    Err(MyError {
+        status_code: StatusCode::BAD_REQUEST,
+        name: "Database",
+        message: "Id is not found in database",
+    }
+    .into())
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -84,28 +88,23 @@ struct GetCachedDatesReply {
 }
 
 #[post("/api/get-cached-dates")]
-async fn get_chached_dates(req_body: web::Json<GetCachedDatesRequest>, pool: web::Data<PgPool>) -> actix_web::Result<HttpResponse> {
-
+async fn get_chached_dates(
+    req_body: web::Json<GetCachedDatesRequest>,
+    pool: web::Data<PgPool>,
+) -> actix_web::Result<HttpResponse> {
     //convert
     let match_type = req_body.match_type.to_owned();
     let team_size = req_body.team_size.to_owned();
     let versus = req_body.versus.to_owned();
 
-    let dates = db::get_available_cached_dates(
-        pool.get_ref(),
-        match_type,
-        team_size,
-        versus,
-    )
-        .await;
+    let dates = db::get_available_cached_dates(pool.get_ref(), match_type, team_size, versus).await;
     match dates {
-        Ok(dates) => {
-            Ok(HttpResponse::Ok().json(GetCachedDatesReply {
-                dates: dates.iter().map(|date| date.format("%F")).collect_vec(),
-            }))
-        }
-        Err(err) =>
+        Ok(dates) => Ok(HttpResponse::Ok().json(GetCachedDatesReply {
+            dates: dates.iter().map(|date| date.format("%F")).collect_vec(),
+        })),
+        Err(err) => {
             Err(actix_web::error::InternalError::new(err, StatusCode::INTERNAL_SERVER_ERROR).into())
+        }
     }
 }
 
@@ -151,7 +150,11 @@ async fn get_cached_rank_page(
                     })
                     .collect_vec(),
             })),
-            Err(err) => Err(actix_web::error::InternalError::new(err, StatusCode::INTERNAL_SERVER_ERROR).into())
+            Err(err) => Err(actix_web::error::InternalError::new(
+                err,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+            .into()),
         }
     }
     let request: CachedRankPageRequest = request.into_inner();
@@ -169,10 +172,10 @@ async fn get_cached_rank_page(
                     request.team_size.to_owned(),
                     request.versus.to_owned(),
                 )
-                    .await;
+                .await;
                 helper_last_leaderboard(last_leaderboard)
             }
-            Err(err) => Err(actix_web::error::ErrorUnprocessableEntity(err))
+            Err(err) => Err(actix_web::error::ErrorUnprocessableEntity(err)),
         }
     } else {
         let last_leaderboard = db::get_latest_rank_page(
@@ -182,8 +185,30 @@ async fn get_cached_rank_page(
             request.team_size.to_owned(),
             request.versus.to_owned(),
         )
-            .await;
+        .await;
         helper_last_leaderboard(last_leaderboard)
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SearchPlayerQuery {
+    pub search: String,
+}
+#[derive(Serialize, Deserialize)]
+struct SearchPlayerResponse {
+    name: String,
+    rl_user_id: i64,
+}
+
+#[get("/api/player")]
+pub async fn search_player(
+    query: web::Query<SearchPlayerQuery>,
+    pool: web::Data<PgPool>,
+) -> actix_web::Result<HttpResponse> {
+    match db::search_player(&pool, &query.search).await {
+        Ok(players) => {
+            Ok(HttpResponse::Ok().json(players))
+        },
+        Err(err) => Err(actix_web::error::ErrorUnprocessableEntity(err)),
+    }
+}
