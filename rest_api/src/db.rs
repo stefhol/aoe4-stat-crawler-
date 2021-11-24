@@ -61,7 +61,7 @@ pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<Mat
         inner join match_history on match_history.id = match_history_id
         where player.rl_user_id = $1
         order by time ASC
-        limit 100
+        limit 10
     "#,
         rl_user_id,
     )

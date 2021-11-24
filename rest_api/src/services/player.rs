@@ -1,8 +1,9 @@
+
 use crate::db::{self};
 use crate::db::RankPageAtTime;
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
-use actix_web::{get, post, web, HttpResponse, ResponseError};
+use actix_web::{HttpResponse, ResponseError, get, post, web};
 use anyhow::Error;
 use derive_more::{Display, Error};
 use itertools::Itertools;
@@ -47,13 +48,12 @@ pub struct MatchHistoryReply {
     username: String,
 }
 
-#[post("/api/get-player-history")]
+#[get("/api/player-history")]
 async fn get_player_history_matches(
-    request: web::Json<RlUserId>,
+    request: web::Query<RlUserId>,
     pool: Data<PgPool>,
 ) -> actix_web::Result<HttpResponse> {
     let request = request.into_inner();
-    // let time = time::Time::;
     let match_history = db::get_match_history(pool.as_ref(), request.rl_user_id.clone()).await;
     let player = db::get_player(pool.as_ref(), request.rl_user_id.clone()).await;
     if let Ok(player) = player {
@@ -87,9 +87,9 @@ struct GetCachedDatesReply {
     dates: Vec<String>,
 }
 
-#[post("/api/get-cached-dates")]
+#[get("/api/cached-dates")]
 async fn get_chached_dates(
-    req_body: web::Json<GetCachedDatesRequest>,
+    req_body: web::Query<GetCachedDatesRequest>,
     pool: web::Data<PgPool>,
 ) -> actix_web::Result<HttpResponse> {
     //convert
@@ -107,6 +107,7 @@ async fn get_chached_dates(
         }
     }
 }
+
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct CachedRankPageRequest {
@@ -130,7 +131,7 @@ pub struct CachedRankPageContent {
     pub elo_rating: i32,
 }
 
-#[post("/api/get-cached-rank-page")]
+#[post("/api/cached-rank-page")]
 async fn get_cached_rank_page(
     request: web::Json<CachedRankPageRequest>,
     pool: web::Data<PgPool>,
