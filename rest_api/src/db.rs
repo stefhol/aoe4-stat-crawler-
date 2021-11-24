@@ -32,7 +32,7 @@ pub async fn search_player(
 ) -> Result<SearchPlayers, Error> {
     let players = sqlx::query_as!(
         SearchPlayer,
-       "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 100",
+       "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 10",
         format!("%{}%",name)
     )
     .fetch_all(pool)
@@ -60,8 +60,8 @@ pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<Mat
         INNER join player_match_history on player.id = player_id
         inner join match_history on match_history.id = match_history_id
         where player.rl_user_id = $1
-        order by time ASC
-        limit 10
+        order by time DESC
+        limit 100
     "#,
         rl_user_id,
     )

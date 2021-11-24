@@ -75,146 +75,6 @@
       ]
     }
   },
-  "98eb499ebfc48b0f297de756e94df3552b7c308ad42f0b9c003e4381f5f4e640": {
-    "query": "\n        select\n                match_type as \"match_type:MatchType\",\n                    team_size as \"team_size:TeamSize\",\n                    versus as \"versus:Versus\",\n                rank,\n                elo_rating,\n                match_history.id,\n                time as \"time!\",\n                elo,\n                wins,\n                losses,\n                win_streak\n                from player\n        INNER join player_match_history on player.id = player_id\n        inner join match_history on match_history.id = match_history_id\n        where player.rl_user_id = $1\n        order by time ASC\n        limit 10\n    ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "match_type:MatchType",
-          "type_info": {
-            "Custom": {
-              "name": "match_type",
-              "kind": {
-                "Enum": [
-                  "unranked",
-                  "ranked",
-                  "custom"
-                ]
-              }
-            }
-          }
-        },
-        {
-          "ordinal": 1,
-          "name": "team_size:TeamSize",
-          "type_info": {
-            "Custom": {
-              "name": "team_size",
-              "kind": {
-                "Enum": [
-                  "1v1",
-                  "2v2",
-                  "3v3",
-                  "4v4",
-                  "custom"
-                ]
-              }
-            }
-          }
-        },
-        {
-          "ordinal": 2,
-          "name": "versus:Versus",
-          "type_info": {
-            "Custom": {
-              "name": "versus",
-              "kind": {
-                "Enum": [
-                  "ai",
-                  "players"
-                ]
-              }
-            }
-          }
-        },
-        {
-          "ordinal": 3,
-          "name": "rank",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "elo_rating",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 5,
-          "name": "id",
-          "type_info": "Uuid"
-        },
-        {
-          "ordinal": 6,
-          "name": "time!",
-          "type_info": "Timestamp"
-        },
-        {
-          "ordinal": 7,
-          "name": "elo",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 8,
-          "name": "wins",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 9,
-          "name": "losses",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 10,
-          "name": "win_streak",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
-  "cffa4f909b99dc2283d59eee878c8ca1adcea0d4d8cf0fbfbf8393cecccc3a45": {
-    "query": "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 100",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "rl_user_id",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 1,
-          "name": "username",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false
-      ]
-    }
-  },
   "dbabe272bac4111bd193ef8a3e2cf67740771fb5e258eb71eb7f6212de0e3c4b": {
     "query": "\n            SELECT DISTINCT date(time) FROM match_history\n            WHERE match_type = $1\n            AND\n            team_size = $2\n            AND\n            versus = $3\n            AND\n            time is not NULL\n            LIMIT 365\n    ",
     "describe": {
@@ -347,6 +207,120 @@
       ]
     }
   },
+  "e6e88a6bc347cd43bf3cff8c21f320cc7a095da686edb44dbb2f56d2a10e549d": {
+    "query": "\n        select\n                match_type as \"match_type:MatchType\",\n                    team_size as \"team_size:TeamSize\",\n                    versus as \"versus:Versus\",\n                rank,\n                elo_rating,\n                match_history.id,\n                time as \"time!\",\n                elo,\n                wins,\n                losses,\n                win_streak\n                from player\n        INNER join player_match_history on player.id = player_id\n        inner join match_history on match_history.id = match_history_id\n        where player.rl_user_id = $1\n        order by time DESC\n        limit 100\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "match_type:MatchType",
+          "type_info": {
+            "Custom": {
+              "name": "match_type",
+              "kind": {
+                "Enum": [
+                  "unranked",
+                  "ranked",
+                  "custom"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 1,
+          "name": "team_size:TeamSize",
+          "type_info": {
+            "Custom": {
+              "name": "team_size",
+              "kind": {
+                "Enum": [
+                  "1v1",
+                  "2v2",
+                  "3v3",
+                  "4v4",
+                  "custom"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 2,
+          "name": "versus:Versus",
+          "type_info": {
+            "Custom": {
+              "name": "versus",
+              "kind": {
+                "Enum": [
+                  "ai",
+                  "players"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 3,
+          "name": "rank",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "elo_rating",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 6,
+          "name": "time!",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 7,
+          "name": "elo",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "wins",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "losses",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 10,
+          "name": "win_streak",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "e6ed5b4c86f21c22933f55f645811968a80e4bb4a1a61070e37b69c884f5d8e1": {
     "query": "select * from player where rl_user_id = $1",
     "describe": {
@@ -388,6 +362,32 @@
         false,
         false,
         true
+      ]
+    }
+  },
+  "f2e41393575ab817444f212816f2995e88e9205bd80a193ba4822c6a5d42a876": {
+    "query": "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 10",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "rl_user_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "username",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false
       ]
     }
   }
