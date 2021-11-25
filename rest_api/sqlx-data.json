@@ -1,80 +1,5 @@
 {
   "db": "PostgreSQL",
-  "891ce899fadd0c1604c2685bfc62f01a90f7395f5a4305cfcdaef3d73febcd05": {
-    "query": "\n        select\n\n                distinct on (player_subset.rl_user_id) rl_user_id,\n                rank,\n                elo,\n                elo_rating\n                from (\n                    SELECT * from player\n                    where player.rl_user_id = any($1)\n                )  as player_subset\n\n        INNER join player_match_history on player_subset.id = player_id\n        inner join (\n            SELECT time,match_type,team_size,versus,elo,elo_rating,rank,id FROM match_history\n            WHERE\n            match_type = $2\n            AND\n            team_size = $3\n            AND\n            versus = $4\n            ORDER BY time DESC\n        ) as match_history_subset\n         on match_history_subset.id = match_history_id\n    ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "rl_user_id",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 1,
-          "name": "rank",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 2,
-          "name": "elo",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "elo_rating",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8Array",
-          {
-            "Custom": {
-              "name": "match_type",
-              "kind": {
-                "Enum": [
-                  "unranked",
-                  "ranked",
-                  "custom"
-                ]
-              }
-            }
-          },
-          {
-            "Custom": {
-              "name": "team_size",
-              "kind": {
-                "Enum": [
-                  "1v1",
-                  "2v2",
-                  "3v3",
-                  "4v4",
-                  "custom"
-                ]
-              }
-            }
-          },
-          {
-            "Custom": {
-              "name": "versus",
-              "kind": {
-                "Enum": [
-                  "ai",
-                  "players"
-                ]
-              }
-            }
-          }
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "dbabe272bac4111bd193ef8a3e2cf67740771fb5e258eb71eb7f6212de0e3c4b": {
     "query": "\n            SELECT DISTINCT date(time) FROM match_history\n            WHERE match_type = $1\n            AND\n            team_size = $2\n            AND\n            versus = $3\n            AND\n            time is not NULL\n            LIMIT 365\n    ",
     "describe": {
@@ -386,6 +311,81 @@
         ]
       },
       "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "ff43aa9302451cb0bf175c29d6638b2329e3ce6d41c248f0339cff3efde27398": {
+    "query": "\n        select\n\n                distinct on (player_subset.rl_user_id) rl_user_id,\n                rank,\n                elo,\n                elo_rating\n                from (\n                    SELECT * from player\n                    where player.rl_user_id = any($1)\n                )  as player_subset\n\n        INNER join player_match_history on player_subset.id = player_id\n        inner join (\n            SELECT time,match_type,team_size,versus,elo,elo_rating,rank,id FROM match_history\n            WHERE\n            match_type = $2\n            AND\n            team_size = $3\n            AND\n            versus = $4\n            ORDER BY time DESC\n        ) as match_history_subset\n         on match_history_subset.id = match_history_id\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "rl_user_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "rank",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "elo",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "elo_rating",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          {
+            "Custom": {
+              "name": "match_type",
+              "kind": {
+                "Enum": [
+                  "unranked",
+                  "ranked",
+                  "custom"
+                ]
+              }
+            }
+          },
+          {
+            "Custom": {
+              "name": "team_size",
+              "kind": {
+                "Enum": [
+                  "1v1",
+                  "2v2",
+                  "3v3",
+                  "4v4",
+                  "custom"
+                ]
+              }
+            }
+          },
+          {
+            "Custom": {
+              "name": "versus",
+              "kind": {
+                "Enum": [
+                  "ai",
+                  "players"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": [
+        false,
+        false,
         false,
         false
       ]

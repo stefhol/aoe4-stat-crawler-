@@ -1,11 +1,10 @@
-use anyhow::{anyhow, Error};
+use anyhow::{ Error};
 use itertools::Itertools;
-use log::debug;
 use model::model::db::{MatchHistory, Player};
 #[allow(unused)]
 use model::model::request::{MatchType, Region, TeamSize, Versus};
 use redis::aio::MultiplexedConnection;
-use redis::{AsyncCommands, RedisError, RedisWrite, ToRedisArgs, Value};
+use redis::{AsyncCommands, RedisWrite, ToRedisArgs, Value};
 use serde::{Deserialize, Serialize};
 use sqlx::{types::time::Date, PgPool};
 
@@ -163,7 +162,7 @@ pub async fn get_latest_rank_page(
     let mut redis_conn = redis_conn.clone();
     let mut cached_rank_page: Vec<RankPageAtTime> = vec![];
     let mut player_ids_to_query = vec![];
-    ///generates a redis key for cached-leaderboards
+    //generates a redis key for cached-leaderboards
     let get_redis_key = |player_id: i64| format!("cached-leaderboard-{}", player_id);
     //go through each player_id to find a value in the redis cache
     for player_id in player_ids {
@@ -174,7 +173,6 @@ pub async fn get_latest_rank_page(
                 player_ids_to_query.push(player_id);
             }
             Value::Data(val) => {
-                debug!("Use cache to retrieve {}",&redis_key);
                 cached_rank_page.push(serde_json::from_slice(&val)?);
             }
             _ => {}

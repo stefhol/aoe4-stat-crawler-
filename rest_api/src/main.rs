@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
     };
     let conn_str_db = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
     let redis_str_db = dotenv::var("REDIS_URL").expect("no REDIS_URL in env");
-    let redis_conn = redis::Client::open("redis://127.0.0.1/").expect("Cant connect to redis db");
+    let redis_conn = redis::Client::open(redis_str_db).expect("Cant connect to redis db");
     let redis_conn = redis_conn.get_multiplexed_tokio_connection().await.expect("Cant open multiplexed connection");
     let pool = PgPoolOptions::new()
         .connect_with(
