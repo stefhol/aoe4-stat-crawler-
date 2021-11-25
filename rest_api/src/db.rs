@@ -1,29 +1,35 @@
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use itertools::Itertools;
+use log::debug;
 use model::model::db::{MatchHistory, Player};
 #[allow(unused)]
 use model::model::request::{MatchType, Region, TeamSize, Versus};
+use redis::aio::MultiplexedConnection;
+use redis::{AsyncCommands, RedisError, RedisWrite, ToRedisArgs, Value};
 use serde::{Deserialize, Serialize};
 use sqlx::{types::time::Date, PgPool};
+
 pub async fn get_player(pool: &PgPool, rl_user_id: i64) -> Result<Player, Error> {
     let player = sqlx::query_as!(
         Player,
         "select * from player where rl_user_id = $1",
         rl_user_id
     )
-    .fetch_one(pool)
-    .await?;
+        .fetch_one(pool)
+        .await?;
     Ok(player)
 }
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchPlayer {
     pub username: String,
     pub rl_user_id: i64,
 }
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchPlayers {
     pub players: Vec<SearchPlayer>,
-    pub count:u32
+    pub count: u32,
 }
 
 pub async fn search_player(
@@ -35,10 +41,11 @@ pub async fn search_player(
        "SELECT rl_user_id, username FROM player WHERE  LOWER(username) like LOWER($1) LIMIT 10",
         format!("%{}%",name)
     )
-    .fetch_all(pool)
-    .await?;
-    Ok(SearchPlayers { count:*&players.len() as u32 ,players})
+        .fetch_all(pool)
+        .await?;
+    Ok(SearchPlayers { count: *&players.len() as u32, players })
 }
+
 ///get all matches from specific player
 pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<MatchHistory>, Error> {
     let match_history = sqlx::query_as!(
@@ -65,17 +72,30 @@ pub async fn get_match_history(pool: &PgPool, rl_user_id: i64) -> Result<Vec<Mat
     "#,
         rl_user_id,
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
 
     Ok(match_history)
 }
+
+#[derive(Deserialize, Serialize)]
 pub struct RankPageAtTime {
     pub rank: i32,
     pub rl_user_id: i64,
     pub elo: i32,
     pub elo_rating: i32,
 }
+
+
+impl ToRedisArgs for &RankPageAtTime {
+    fn write_redis_args<W>(&self, out: &mut W)
+        where
+            W: ?Sized + RedisWrite,
+    {
+        out.write_arg_fmt(serde_json::to_string(self).expect("Can't serialize RankPageAtTime as string"))
+    }
+}
+
 
 ///Gets match entries from players at specific date
 pub async fn get_rank_page_at_time(
@@ -86,7 +106,6 @@ pub async fn get_rank_page_at_time(
     team_size: TeamSize,
     versus: Versus,
 ) -> Result<Vec<RankPageAtTime>, Error> {
-
     let match_history = sqlx::query!(
         r#"
         select
@@ -119,8 +138,8 @@ pub async fn get_rank_page_at_time(
         team_size as TeamSize,
         versus as Versus
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
     Ok(match_history
         .iter()
         .map(|record| RankPageAtTime {
@@ -131,16 +150,39 @@ pub async fn get_rank_page_at_time(
         })
         .collect_vec())
 }
+
 ///Gets the last match entry from each player
 pub async fn get_latest_rank_page(
     pool: &PgPool,
+    redis_conn: &MultiplexedConnection,
     player_ids: Vec<i64>,
     match_type: MatchType,
     team_size: TeamSize,
     versus: Versus,
 ) -> Result<Vec<RankPageAtTime>, Error> {
-    
-    let match_history = sqlx::query!(
+    let mut redis_conn = redis_conn.clone();
+    let mut cached_rank_page: Vec<RankPageAtTime> = vec![];
+    let mut player_ids_to_query = vec![];
+    ///generates a redis key for cached-leaderboards
+    let get_redis_key = |player_id: i64| format!("cached-leaderboard-{}", player_id);
+    //go through each player_id to find a value in the redis cache
+    for player_id in player_ids {
+        let redis_key = get_redis_key(player_id);
+        let redis_result = redis_conn.get(&redis_key).await.unwrap();
+        match redis_result {
+            Value::Nil => {
+                player_ids_to_query.push(player_id);
+            }
+            Value::Data(val) => {
+                debug!("Use cache to retrieve {}",&redis_key);
+                cached_rank_page.push(serde_json::from_slice(&val)?);
+            }
+            _ => {}
+        };
+    }
+    if player_ids_to_query.len() > 0 {
+        //if player_ids are not all cached get the rest from the db
+        let match_history = sqlx::query!(
         r#"
         select
 
@@ -165,23 +207,37 @@ pub async fn get_latest_rank_page(
             ORDER BY time DESC
         ) as match_history_subset
          on match_history_subset.id = match_history_id
-    "#,
-        player_ids as Vec<i64>,
-        match_type as MatchType,
-        team_size as TeamSize,
-        versus as Versus
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(match_history
-        .iter()
-        .map(|record| RankPageAtTime {
-            elo: record.elo,
-            elo_rating: record.elo_rating,
-            rank: record.rank,
-            rl_user_id: record.rl_user_id,
-        })
-        .collect_vec())
+        "#,
+            player_ids_to_query as Vec<i64>,
+            match_type as MatchType,
+            team_size as TeamSize,
+            versus as Versus
+        )
+            .fetch_all(pool)
+            .await?;
+        //convert match_history to known rust struct
+        let mut match_history: Vec<RankPageAtTime> = match_history
+            .iter()
+            .map(|record| RankPageAtTime {
+                elo: record.elo,
+                elo_rating: record.elo_rating,
+                rank: record.rank,
+                rl_user_id: record.rl_user_id,
+            })
+            .collect_vec();
+        //insert missing match_history in  cache
+        for rank_page in &match_history {
+            let redis_key = get_redis_key(rank_page.rl_user_id);
+            redis::pipe()
+                .atomic()
+                .set(&redis_key, &rank_page)
+                .expire(&redis_key, 600)
+                .query_async(&mut redis_conn).await?;
+        };
+        //add db match_history to cached_rank_page
+        cached_rank_page.append(&mut match_history);
+    }
+    Ok(cached_rank_page)
 }
 
 pub async fn get_available_cached_dates(
@@ -206,7 +262,7 @@ pub async fn get_available_cached_dates(
         team_size as TeamSize,
         versus as Versus
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
     Ok(dates.iter().map(|date| date.date.unwrap()).collect_vec())
 }

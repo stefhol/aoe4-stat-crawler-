@@ -9,6 +9,7 @@ use derive_more::{Display, Error};
 use itertools::Itertools;
 use model::model::db::MatchHistorySerializable;
 use model::model::request::{MatchType, TeamSize, Versus};
+use redis::aio::MultiplexedConnection;
 use serde::{Deserialize, Serialize};
 use sqlx::types::time::Date;
 use sqlx::PgPool;
@@ -135,6 +136,7 @@ pub struct CachedRankPageContent {
 async fn get_cached_rank_page(
     request: web::Json<CachedRankPageRequest>,
     pool: web::Data<PgPool>,
+    redis_conn:web::Data<MultiplexedConnection>
 ) -> actix_web::Result<HttpResponse> {
     fn helper_last_leaderboard(
         last_leaderboard: Result<Vec<RankPageAtTime>, Error>,
@@ -181,6 +183,7 @@ async fn get_cached_rank_page(
     } else {
         let last_leaderboard = db::get_latest_rank_page(
             &pool,
+            &redis_conn,
             request.player_ids,
             request.match_type.to_owned(),
             request.team_size.to_owned(),

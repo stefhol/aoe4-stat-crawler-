@@ -63,6 +63,9 @@ async fn main() -> std::io::Result<()> {
             .expect("Port is in wrong format"),
     };
     let conn_str_db = dotenv::var("DATABASE_URL").expect("no DATABASE_URL in env");
+    let redis_str_db = dotenv::var("REDIS_URL").expect("no REDIS_URL in env");
+    let redis_conn = redis::Client::open("redis://127.0.0.1/").expect("Cant connect to redis db");
+    let redis_conn = redis_conn.get_multiplexed_tokio_connection().await.expect("Cant open multiplexed connection");
     let pool = PgPoolOptions::new()
         .connect_with(
             PgConnectOptions::from_str(&conn_str_db)
@@ -111,6 +114,7 @@ async fn main() -> std::io::Result<()> {
                     .max_age(3600);
                 App::new()
                     .app_data(Data::new(pool.clone()))
+                    .app_data(Data::new(redis_conn.clone()))
                     .wrap(middleware::Compress::default())
                     .wrap(cors)
                     .wrap(middleware::Logger::default())
@@ -136,6 +140,7 @@ async fn main() -> std::io::Result<()> {
                     .max_age(3600);
                 App::new()
                     .app_data(Data::new(pool.clone()))
+                    .app_data(Data::new(redis_conn.clone()))
                     .wrap(middleware::Compress::default())
                     .wrap(cors)
                     .wrap(middleware::Logger::default())

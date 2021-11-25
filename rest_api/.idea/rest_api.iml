@@ -63,6 +63,7 @@
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/crossbeam-utils-0dd2e6dc870a4399/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/maybe-uninit-eaa73beb0f44ac72/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/memchr-9dd8ab0f3e7cb637/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/futures-util-b9dafc70dcc58919/out" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 model = {path="../model"}
-# redis = {version = "0.21.4", features = ["tokio-comp","connection-manager","aio"]}
+redis = {version = "0.21.4", features = ["tokio-comp","connection-manager","aio"]}
 derive_more = "0.99.16"
 actix-web = { version = "4.0.0-beta.10" , features = ["openssl"] }
 openssl = { version = "0.10", features = ["v110"] }
